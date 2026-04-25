@@ -453,7 +453,7 @@ export const conceptDatabase: Record<string, ConceptData> = {
   },
   "electrostatics": {
     topicId: "electrostatics",
-    intro: "Electrostatics deals with the forces, fields, and potentials arising from static (stationary) electric charges.",
+    intro: "Electrostatics deals with the forces, fields, and potentials arising from static (stationary) electric charges. When solving electrostatic problems involving geometric shapes, the key is mastering the Superposition Principle.",
     principles: [
       {
         id: "elst_p1",
@@ -482,7 +482,29 @@ export const conceptDatabase: Record<string, ConceptData> = {
       {
         id: "elst_t1",
         title: "Superposition Principle",
-        content: "When multiple charges are present, find the force (or field) from each individual charge, then add them up as **Vectors**. Do not just add their magnitudes!"
+        content: "When multiple charges are present, find the force (or field) from each individual charge, then add them up as **Vectors**. The net force on any charge is simply the vector sum of the individual forces acting on it. Before doing any math, always draw a diagram and sketch the force arrows. If you can visually estimate where the net force should point, you'll immediately know if your final math is correct!"
+      }
+    ],
+    samples: [
+      {
+        id: "elst_s1",
+        title: "The Basic Triangle (Resultant Force)",
+        content: "**The Problem:** Three identical positive charges, each of magnitude $+q$, are placed at the vertices (A, B, and C) of an equilateral triangle of side length $a$. Find the magnitude and direction of the net electrostatic force acting on the charge at vertex A.\n\n**Intuition Builder (The \"Push\" Model):** Imagine you are standing at vertex A. The charge at B is pushing you away (up and to the right), and the charge at C is also pushing you away (up and to the left). Because the pushes are identical in strength and symmetrical, your left/right movements cancel out. You will only be pushed straight up, exactly along the bisector of the angle. Concrete Example: If two friends push you with equal force from exactly opposite angles, you won't fall left or right; you'll stumble straight backward."
+      },
+      {
+        id: "elst_s2",
+        title: "Triangle System Equilibrium",
+        content: "**The Problem:** Three identical charges $+q$ are fixed at the corners of an equilateral triangle of side $a$. A fourth unknown charge $Q$ is placed exactly at the centroid of the triangle. What must be the sign and magnitude of charge $Q$ so that the entire system is in static equilibrium?\n\n**Intuition Builder:** From Problem 1, we know the corner charges want to fly apart outward. To stop them, $Q$ must pull them inward. Therefore, $Q$ must be negative. It's closer to the corners than the corners are to each other (distance to centroid is $a/\\sqrt{3}$). Because electrostatic force gets exponentially stronger the closer you get (inverse-square law), $Q$ doesn't need to be as large as $+q$ to hold them together. Think of $Q$ as a central rubber band."
+      },
+      {
+        id: "elst_s3",
+        title: "The Rectangle (Concrete Vectors)",
+        content: "**The Problem:** Four charges are placed at the corners of a 3cm x 4cm rectangle. Top-left (A): $+2\\mu\\text{C}$, Top-right (B): $-2\\mu\\text{C}$, Bottom-left (C): $+2\\mu\\text{C}$, Bottom-right (D): $-2\\mu\\text{C}$. Find the net force acting on a $+1\\mu\\text{C}$ test charge placed exactly at the center.\n\n**Intuition Builder (The Diagonal Pull):** The diagonal of a 3-4 rectangle is exactly 5 cm. The test charge at the center is positive. Top-left (+) pushes it away, and bottom-right (-) pulls it in. These two forces point in the exact same direction (down and to the right) and combine. The bottom-left (+) pushes it away, and top-right (-) pulls it in. These also combine (pointing up and to the right). The vertical forces will cancel, but the horizontal forces will stack up massively. The net force must be purely horizontal, pointing to the right."
+      },
+      {
+        id: "elst_s4",
+        title: "Combination Shape (The Hexagon Symmetry Hack)",
+        content: "**The Problem:** Six points form a regular hexagon of side length $a$. Five identical positive charges $+q$ are placed at five of the vertices. The sixth vertex is left empty. Calculate the net electric field at the exact geometric center.\n\n**Intuition Builder (The \"Negative Space\" Trick):** If you calculate the field from all 5 charges, it will take a page of trigonometry. Instead, imagine what would happen if a 6th $+q$ charge was placed in the empty spot. The hexagon would be perfectly symmetrical. The \"pushes\" from opposite corners would perfectly cancel each other out, making the net field at the center exactly zero. Mathematically treat the \"missing\" charge as if it is a combination of two ghost charges: a $+q$ and a $-q$ occupying the same empty spot. The problem simplifies from adding 5 vectors to just calculating the field of a single $-q$ charge located at a distance $a$ from the center."
       }
     ],
     mistakes: [

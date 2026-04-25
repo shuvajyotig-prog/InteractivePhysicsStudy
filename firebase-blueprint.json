@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Attempt": {
+      "title": "Test Attempt",
+      "description": "A student's attempt at a pressure test",
+      "type": "object",
+      "properties": {
+        "topicId": { "type": "string" },
+        "score": { "type": "integer" },
+        "total": { "type": "integer" },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "date": { "type": "string", "format": "date-time" },
+        "mistakes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["topicId", "score", "total", "difficulty", "date", "mistakes"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "Metadata about the user",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/users/{userId}/attempts/{attemptId}": {
+      "schema": "Attempt",
+      "description": "History of test attempts per user"
+    }
+  }
+}

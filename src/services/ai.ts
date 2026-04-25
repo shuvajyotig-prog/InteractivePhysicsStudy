@@ -28,29 +28,59 @@ const quizSchema: Schema = {
   }
 };
 
-export async function generatePressureTest(grade: string, topic: string): Promise<QuizQuestion[]> {
+const singleQuizSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    question: { type: Type.STRING, description: "The multiple choice question text." },
+    options: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "Exactly four options for the multiple choice question."
+    },
+    correctOptionIndex: { type: Type.INTEGER, description: "The zero-based index (0-3) of the correct option in the options array." },
+    explanation: { type: Type.STRING, description: "A detailed explanation of why the answer is correct, clearing up common misconceptions." }
+  },
+  required: ["question", "options", "correctOptionIndex", "explanation"]
+};
+
+export async function generateQuestion(
+  grade: string, 
+  topic: string, 
+  difficulty: 'easy' | 'medium' | 'hard',
+  previousContext?: { question: string; isCorrect: boolean }[]
+): Promise<QuizQuestion> {
+  const contextPrompt = previousContext && previousContext.length > 0 
+    ? `\nPrevious performance in this session:
+       ${previousContext.map((c, i) => `Q${i+1}: ${c.question} - ${c.isCorrect ? 'Correct' : 'Incorrect'}`).join('\n')}
+       Adjust the complexity of this next question accordingly while staying within the '${difficulty}' band.`
+    : '';
+
   const prompt = `You are an expert CBSE Physics examiner.
-Generate 5 challenging, conceptual multiple-choice questions for Class ${grade} Physics on the topic: ${topic}.
-The questions should test a student's core understanding and ability to apply concepts, rather than simple rote memorization.
-Ensure the difficulty is appropriate for the CBSE curriculum for class ${grade}.
-For each question, provide 4 plausible options, where 1 is correct and 3 are common misconceptions.
-Provide a clear, educational explanation for the correct answer. Returns exactly 5 questions.`;
+Generate ONE challenging, conceptual multiple-choice question for Class ${grade} Physics on the topic: ${topic}.
+Difficulty Level: ${difficulty.toUpperCase()}.
+${difficulty === 'easy' ? 'Focus on fundamental concepts and direct understanding.' : 
+  difficulty === 'medium' ? 'Combine multiple concepts and require conceptual derivation.' : 
+  'Highly challenging, multi-step conceptual thinking, focusing on subtle misconceptions.'}
+The question should test a student's core understanding rather than rote memorization.
+Ensure the difficulty is strictly aligned with the '${difficulty}' level for CBSE class ${grade}.${contextPrompt}
+Provide 4 plausible options, where 1 is correct and 3 are common misconceptions.
+Provide a clear, educational explanation for the correct answer.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-pro",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      responseSchema: quizSchema,
-      temperature: 0.7,
+      responseSchema: singleQuizSchema,
+      temperature: 0.8,
     }
   });
 
   const text = response.text;
   if (!text) {
-     throw new Error("Failed to generate questions.");
+     throw new Error("Failed to generate question.");
   }
-  return JSON.parse(text) as QuizQuestion[];
+  return JSON.parse(text) as QuizQuestion;
 }
 
 export async function explainFormula(formulaContent: string): Promise<string> {

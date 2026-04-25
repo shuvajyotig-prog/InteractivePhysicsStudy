@@ -374,6 +374,7 @@ function ElectrostaticsSimulation() {
   };
 
   const points = getPoints();
+  const actualCharges = charges.length === points.length ? charges : points.map((_, i) => charges[i] || 0);
 
   // Calculate forces
   const K = 50000; // Visual scaling constant
@@ -385,14 +386,45 @@ function ElectrostaticsSimulation() {
       const dy = p1[1] - p2[1];
       const distSq = dx * dx + dy * dy;
       const dist = Math.sqrt(distSq);
-      if (dist === 0) return;
+      if (dist === 0 || Number.isNaN(dist)) return;
       
-      const forceMag = (K * charges[i] * charges[j]) / (distSq * dist); // multiplied by dx/dist or dy/dist, so we divide by dist^3
+      const forceMag = (K * actualCharges[i] * actualCharges[j]) / (distSq * dist); // multiplied by dx/dist or dy/dist, so we divide by dist^3
       fx += forceMag * dx;
       fy += forceMag * dy;
     });
     return { fx, fy };
   });
+
+  // Calculate required central charge for equilibrium (System equilibrium assuming symmetric charges)
+  let equilibriumQ: number | null = null;
+  if (shape.includes('-center') && actualCharges[0] !== 0) {
+    let fx_perim = 0;
+    let fy_perim = 0;
+    const numPerimeters = points.length - 1;
+    for (let j = 1; j < numPerimeters; j++) {
+      const dx = points[0][0] - points[j][0];
+      const dy = points[0][1] - points[j][1];
+      const distSq = dx * dx + dy * dy;
+      const dist = Math.sqrt(distSq);
+      if (dist > 0) {
+         const fMag = (K * actualCharges[0] * actualCharges[j]) / (distSq * dist);
+         fx_perim += fMag * dx;
+         fy_perim += fMag * dy;
+      }
+    }
+    
+    // Radial vector from center to point 0
+    const rx = points[0][0];
+    const ry = points[0][1];
+    const rMag = Math.sqrt(rx*rx + ry*ry);
+    const ux = rx / rMag;
+    const uy = ry / rMag;
+    
+    const F_radial = fx_perim * ux + fy_perim * uy;
+    const F_c_radial_unit = (K * actualCharges[0] * 1) / (rMag * rMag);
+    
+    equilibriumQ = - F_radial / F_c_radial_unit;
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
@@ -437,7 +469,7 @@ function ElectrostaticsSimulation() {
 
             {/* Draw forces */}
             {forces.map((f, i) => {
-              if (charges[i] === 0 || (f.fx === 0 && f.fy === 0)) return null;
+              if (actualCharges[i] === 0 || (f.fx === 0 && f.fy === 0) || Number.isNaN(f.fx) || Number.isNaN(f.fy)) return null;
               const p = points[i];
               // Cap visual length of force vector
               const fMag = Math.sqrt(f.fx*f.fx + f.fy*f.fy);
@@ -445,18 +477,20 @@ function ElectrostaticsSimulation() {
               const scale = fMag > maxL ? maxL / fMag : 1;
               const vx = f.fx * scale;
               const vy = f.fy * scale;
+              const isCenter = shape.includes('-center') && i === points.length - 1;
+              const strokeColor = isCenter ? "#f97316" : "#10b981";
               
               return (
                 <g key={`f-${i}`}>
                    <defs>
                      <marker id={`arrowhead-${i}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                       <polygon points="0 0, 6 3, 0 6" fill="#10b981" />
+                       <polygon points="0 0, 6 3, 0 6" fill={strokeColor} />
                      </marker>
                    </defs>
                    <line 
                      x1={p[0]} y1={p[1]} 
                      x2={p[0] + vx} y2={p[1] + vy} 
-                     stroke="#10b981" 
+                     stroke={strokeColor} 
                      strokeWidth="3"
                      markerEnd={`url(#arrowhead-${i})`}
                    />
@@ -466,18 +500,34 @@ function ElectrostaticsSimulation() {
 
             {/* Draw charges */}
             {points.map((p, i) => {
-              const q = charges[i];
+              const q = actualCharges[i];
               const color = q < 0 ? '#ef4444' : q > 0 ? '#3b82f6' : '#94a3b8';
               const isCenter = shape.includes('-center') && i === points.length - 1;
               return (
                 <g key={`q-${i}`} transform={`translate(${p[0]}, ${p[1]})`}>
+                  {isCenter && equilibriumQ !== null && Math.abs(q - equilibriumQ) > 0.1 && (
+                    <circle cx="0" cy="0" r="22" fill="none" stroke="#f97316" strokeWidth="2" strokeDasharray="4,4" className="opacity-50" />
+                  )}
+                  {isCenter && equilibriumQ !== null && Math.abs(q - equilibriumQ) <= 0.1 && (
+                    <circle cx="0" cy="0" r="22" fill="none" stroke="#22c55e" strokeWidth="3" className="opacity-80" />
+                  )}
                   <circle cx="0" cy="0" r="16" fill={color} className="shadow-lg drop-shadow-md" />
                   <text x="0" y="5" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">
                     {q > 0 ? `+${q}` : q}
                   </text>
-                  <text x="0" y="-22" textAnchor="middle" fill="#64748b" fontSize="12" fontWeight="bold">
+                  <text x="0" y="-22" textAnchor="middle" fill={isCenter ? "#f97316" : "#64748b"} fontSize="12" fontWeight="bold">
                     {isCenter ? 'qCenter' : `q${i+1}`}
                   </text>
+                  {isCenter && equilibriumQ !== null && Math.abs(q - equilibriumQ) > 0.1 && (
+                     <text x="0" y="32" textAnchor="middle" fill="#f97316" fontSize="10" fontWeight="bold">
+                       Needs {equilibriumQ.toFixed(2)}
+                     </text>
+                  )}
+                  {isCenter && equilibriumQ !== null && Math.abs(q - equilibriumQ) <= 0.1 && (
+                     <text x="0" y="32" textAnchor="middle" fill="#22c55e" fontSize="10" fontWeight="bold">
+                       Balanced
+                     </text>
+                  )}
                 </g>
               );
             })}
@@ -511,9 +561,26 @@ function ElectrostaticsSimulation() {
           <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2">
             <Zap className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
             <p className="text-xs text-green-800 leading-relaxed font-medium">
-              The green arrows show the <strong>net force vector</strong> acting on each point charge, calculated by superimposing Coulomb forces from all other charges.
+              The colored arrows show the <strong>net force vector</strong> acting on each point charge, calculated by superimposing Coulomb forces from all other charges.
             </p>
           </div>
+          
+          {shape.includes('-center') && equilibriumQ !== null && (
+             <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100 flex flex-col gap-3">
+               <div className="flex items-start gap-2">
+                 <Zap className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                 <p className="text-xs text-orange-800 leading-relaxed font-medium">
+                   For equilibrium of q1 (net force = 0), the center charge must be approximately <strong className="font-mono">{equilibriumQ.toFixed(2)} μC</strong> (if symmetric, holds for all perimeter charges).
+                 </p>
+               </div>
+               <button 
+                 onClick={() => updateCharge(charges.length - 1, Number(equilibriumQ?.toFixed(2)))} 
+                 className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold uppercase tracking-widest py-2 px-4 rounded-lg transition-colors shadow-sm self-start"
+               >
+                 Apply Equilibrium Charge
+               </button>
+             </div>
+          )}
         </div>
       </div>
     </div>

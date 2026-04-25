@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Activity, PlaySquare } from 'lucide-react';
+import { Activity, PlaySquare, RotateCcw, Gauge, Compass, Play, Pause } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface ProjectileSimulationProps {
@@ -18,8 +18,8 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
   const [time, setTime] = useState(0);
 
   // --- Graphs State ---
-  const [initialVel2, setInitialVel2] = useState(0);
-  const [accel, setAccel] = useState(5);
+  const [initialVel2, setInitialVel2] = useState(20);
+  const [accel, setAccel] = useState(9.8);
   const [playGraphs, setPlayGraphs] = useState(false);
   const [graphTime, setGraphTime] = useState(0);
 
@@ -30,20 +30,20 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
   const vy = velocity * Math.sin(angleRad);
   
   const flightTime = (2 * vy) / g;
-  const maxHeight = Math.pow(vy, 2) / (2 * g);
+  const maxHeight = Math.pow(vy, 2) / (2 * g); // u^2 sin^2 theta / 2g
   const maxRange = vx * flightTime;
 
-  const requestRef = useRef<number>();
-  const startTimeRef = useRef<number>();
+  const requestRef = useRef<number | undefined>(undefined);
+  const startTimeRef = useRef<number | undefined>(undefined);
 
-  const maxGraphTime = 10;
+  const maxGraphTime = 5;
 
   const animate = (timestamp: number) => {
     if (!startTimeRef.current) startTimeRef.current = timestamp;
     const progress = (timestamp - startTimeRef.current) / 1000; // in seconds
 
     if (activeTab === 'projectile') {
-      const simTime = progress * 2; 
+      const simTime = progress * 1.5; 
       if (simTime < flightTime) {
         setTime(simTime);
         requestRef.current = requestAnimationFrame(animate);
@@ -52,9 +52,8 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
         setIsPlaying(false);
       }
     } else {
-      const gTime = progress;
-      if (gTime < maxGraphTime) {
-        setGraphTime(gTime);
+      if (progress < maxGraphTime) {
+        setGraphTime(progress);
         requestRef.current = requestAnimationFrame(animate);
       } else {
         setGraphTime(maxGraphTime);
@@ -80,6 +79,8 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
   const resetProjectile = () => {
     setIsPlaying(false);
     setTime(0);
+    setVelocity(initialVelocity);
+    setAngle(initialAngle);
   };
 
   const resetGraphs = () => {
@@ -168,63 +169,102 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
              </svg>
           </div>
 
-          <div className="bg-nat-light border-t border-nat-border flex flex-col md:flex-row items-center p-6 md:px-10 gap-8 shrink-0">
-            <div className="flex-1 w-full flex gap-8">
-              <div className="flex-1">
-                <div className="flex justify-between mb-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Velocity (u)</label>
-                  <span className="text-xs font-mono text-nat-muted">{velocity} m/s</span>
+          <div className="bg-nat-panel border-t border-nat-border flex flex-col items-center p-6 md:px-10 gap-8 shrink-0">
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-primary/30 transition-colors">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-nat-primary/10 rounded-lg text-nat-primary">
+                      <Gauge className="w-4 h-4" />
+                    </div>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Initial Velocity (u)</label>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-nat-primary bg-nat-light px-2 py-1 rounded border border-nat-border">{velocity} m/s</span>
                 </div>
                 <input 
                   type="range" 
                   min="5" max="40" step="1" 
                   value={velocity} 
-                  onChange={(e) => { setVelocity(Number(e.target.value)); resetProjectile(); }}
-                  className="w-full accent-nat-primary"
+                  onChange={(e) => { setVelocity(Number(e.target.value)); setTime(0); setIsPlaying(false); }}
+                  className="w-full h-2 bg-nat-light rounded-lg appearance-none cursor-pointer accent-nat-primary"
                   disabled={isPlaying && time > 0}
                 />
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between mb-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Angle (θ)</label>
-                  <span className="text-xs font-mono text-nat-muted">{angle}°</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="10" max="80" step="1" 
-                  value={angle} 
-                  onChange={(e) => { setAngle(Number(e.target.value)); resetProjectile(); }}
-                  className="w-full accent-nat-primary"
-                  disabled={isPlaying && time > 0}
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-              <div className="flex gap-4 mr-4 text-[10px] uppercase font-bold text-nat-muted tracking-wide text-right">
-                <div>
-                  <div className="mb-0.5">Time</div>
-                  <div className="font-mono text-nat-primary">{time.toFixed(1)}s</div>
-                </div>
-                <div>
-                  <div className="mb-0.5">Range</div>
-                  <div className="font-mono text-nat-primary">{maxRange.toFixed(0)}m</div>
+                <div className="flex justify-between mt-2 text-[9px] font-bold text-nat-muted uppercase tracking-tighter">
+                  <span>5 m/s</span>
+                  <span>40 m/s</span>
                 </div>
               </div>
 
-              <button onClick={resetProjectile} className="px-4 py-3 bg-white text-nat-dark rounded-full text-xs font-bold uppercase tracking-widest border border-nat-border hover:bg-nat-panel transition-colors">
-                Reset
-              </button>
-              
-              {isPlaying ? (
-                <button onClick={() => setIsPlaying(false)} className="px-6 py-3 bg-[#c27a56] text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#a05a36] transition-colors">
-                  Pause
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-secondary/30 transition-colors">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-nat-secondary/10 rounded-lg text-nat-secondary">
+                      <Compass className="w-4 h-4" />
+                    </div>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Launch Angle (θ)</label>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-nat-secondary bg-nat-light px-2 py-1 rounded border border-nat-border">{angle}°</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" max="90" step="1" 
+                  value={angle} 
+                  onChange={(e) => { setAngle(Number(e.target.value)); setTime(0); setIsPlaying(false); }}
+                  className="w-full h-2 bg-nat-light rounded-lg appearance-none cursor-pointer accent-nat-secondary"
+                  disabled={isPlaying && time > 0}
+                />
+                <div className="flex justify-between mt-2 text-[9px] font-bold text-nat-muted uppercase tracking-tighter">
+                  <span>0°</span>
+                  <span>90°</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-6">
+              <div className="flex items-center gap-6 bg-white px-6 py-3 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-nat-muted">Current Time</span>
+                  <span className="text-sm font-mono font-bold text-nat-primary italic">{time.toFixed(2)}s</span>
+                </div>
+                <div className="w-[1px] h-8 bg-nat-border"></div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-nat-muted">Max Range</span>
+                  <span className="text-sm font-mono font-bold text-nat-primary italic">{maxRange.toFixed(1)}m</span>
+                </div>
+                <div className="w-[1px] h-8 bg-nat-border"></div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-nat-muted">Max Height</span>
+                  <span className="text-sm font-mono font-bold text-nat-primary italic">{maxHeight.toFixed(1)}m</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={resetProjectile} 
+                  className="px-5 py-3 bg-white text-nat-dark rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] border border-nat-border hover:bg-nat-panel hover:text-nat-primary transition-all flex items-center gap-2 shadow-sm active:scale-95"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reset Lab
                 </button>
-              ) : (
-                <button onClick={() => setIsPlaying(true)} className="px-6 py-3 bg-nat-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-nat-primary-hover transition-colors">
-                  {time > 0 ? "Resume" : "Run"}
-                </button>
-              )}
+                
+                {isPlaying ? (
+                  <button 
+                    onClick={() => setIsPlaying(false)} 
+                    className="px-8 py-3 bg-nat-accent text-white rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-nat-accent/90 transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                  >
+                    <Pause className="w-4 h-4 fill-current" />
+                    Halt
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsPlaying(true)} 
+                    className="px-8 py-3 bg-nat-primary text-white rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-nat-primary-hover transition-all flex items-center gap-2 shadow-lg shadow-nat-primary/30 active:scale-95"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    {time > 0 ? "Resume" : "Launch"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </>
@@ -232,95 +272,190 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
 
       {activeTab === 'graphs' && (
         <>
-          <div className="flex-1 flex flex-col md:flex-row min-h-[350px] bg-white divide-y md:divide-y-0 md:divide-x divide-nat-border">
-            <div className="flex-1 p-6 relative h-[250px] md:h-auto">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-[#8c9c75] mb-2 z-10 relative">Displacement-Time (s-t)</h4>
-              <p className="text-[10px] text-nat-muted mb-4 z-10 relative max-w-[200px]">Slope = Velocity. Curve indicates acceleration.</p>
-              <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute top-0 left-0 w-full h-full p-4 pt-16 pb-8 pl-8 overflow-visible">
-                <line x1="0" y1="100" x2="100" y2="100" stroke="#d5d2c9" strokeWidth="2" />
-                <line x1="0" y1="0" x2="0" y2="100" stroke="#d5d2c9" strokeWidth="2" />
-                <polyline 
-                  points={Array.from({length: Math.floor(graphTime * 10)}).map((_, i) => {
-                    const t = i / 10;
-                    const d = (initialVel2 * t) + (0.5 * accel * t * t);
-                    return `${(t / maxGraphTime) * 100},${100 - Math.min((d / 200) * 100, 100)}`;
-                  }).join(' ')}
-                  fill="none" stroke="#8c9c75" strokeWidth="3"
-                />
-              </svg>
+          <div className="flex-1 flex flex-col md:flex-row min-h-[400px] bg-white divide-y md:divide-y-0 md:divide-x divide-nat-border overflow-hidden">
+            <div className="flex-1 p-8 relative flex flex-col">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-nat-secondary">Vertical Displacement</h4>
+                  <p className="text-[10px] text-nat-muted mt-1 leading-relaxed">y = ut + ½at² • (Parabolic Curve)</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] font-bold text-nat-muted uppercase tracking-widest">Max Peak</div>
+                  <div className="text-sm font-mono font-bold text-nat-secondary italic">
+                    {Math.max(0, (initialVel2 * (initialVel2 / (accel || 1))) + (0.5 * -accel * Math.pow(initialVel2 / (accel || 1), 2))).toFixed(1)}m
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-1 relative min-h-[200px] bg-nat-panel-alt/20 rounded-2xl border border-nat-border/50 border-dashed m-1">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute top-0 left-0 w-full h-full p-6 pt-2 pb-2 pl-2 overflow-visible">
+                  {/* Grid Lines */}
+                  {[0, 25, 50, 75, 100].map(v => (
+                    <g key={v}>
+                      <line x1="0" y1={v} x2="100" y2={v} stroke="#d5d2c9" strokeWidth="0.5" strokeDasharray="2,2" />
+                      <line x1={v} y1="0" x2={v} y2="100" stroke="#d5d2c9" strokeWidth="0.5" strokeDasharray="2,2" />
+                    </g>
+                  ))}
+                  <line x1="0" y1="100" x2="100" y2="100" stroke="#8c9c75" strokeWidth="2" />
+                  <line x1="0" y1="0" x2="0" y2="100" stroke="#8c9c75" strokeWidth="2" />
+                  
+                  <motion.polyline 
+                    points={Array.from({length: 101}).map((_, i) => {
+                      const t = (i / 100) * maxGraphTime;
+                      const d = (initialVel2 * t) - (0.5 * accel * t * t);
+                      const displayT = (t / maxGraphTime) * 100;
+                      // Scaling d: assuming max d is around 75m for the box
+                      const displayD = 100 - (d / 75) * 100;
+                      return t <= graphTime ? `${displayT},${displayD}` : '';
+                    }).filter(p => p !== '').join(' ')}
+                    fill="none" 
+                    stroke="#8c9c75" 
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {graphTime > 0 && (
+                    <circle 
+                      cx={(graphTime / maxGraphTime) * 100} 
+                      cy={100 - (((initialVel2 * graphTime) - (0.5 * accel * graphTime * graphTime)) / 75) * 100} 
+                      r="4" fill="#8c9c75" 
+                    />
+                  )}
+                </svg>
+              </div>
             </div>
-            <div className="flex-1 p-6 relative h-[250px] md:h-auto">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-[#c27a56] mb-2 z-10 relative">Velocity-Time (v-t)</h4>
-               <p className="text-[10px] text-nat-muted mb-4 z-10 relative max-w-[200px]">Slope = Acceleration. Area under curve = Displacement.</p>
-              <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute top-0 left-0 w-full h-full p-4 pt-16 pb-8 pl-8 overflow-visible">
-                <line x1="0" y1="100" x2="100" y2="100" stroke="#d5d2c9" strokeWidth="2" />
-                <line x1="0" y1="0" x2="0" y2="100" stroke="#d5d2c9" strokeWidth="2" />
-                 <polyline 
-                  points={Array.from({length: Math.floor(graphTime * 10)}).map((_, i) => {
-                    const t = i / 10;
-                    const v = initialVel2 + (accel * t);
-                    return `${(t / maxGraphTime) * 100},${100 - Math.min((v / 60) * 100, 100)}`;
-                  }).join(' ')}
-                  fill="none" stroke="#c27a56" strokeWidth="3"
-                />
-              </svg>
+
+            <div className="flex-1 p-8 relative flex flex-col">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-nat-primary">Vertical Velocity</h4>
+                  <p className="text-[10px] text-nat-muted mt-1 leading-relaxed">v = u + at • (Linear Slope = Acceleration)</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] font-bold text-nat-muted uppercase tracking-widest">Initial Head</div>
+                  <div className="text-sm font-mono font-bold text-nat-primary italic">{initialVel2} m/s</div>
+                </div>
+              </div>
+
+              <div className="flex-1 relative min-h-[200px] bg-nat-panel-alt/20 rounded-2xl border border-nat-border/50 border-dashed m-1">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute top-0 left-0 w-full h-full p-6 pt-2 pb-2 pl-2 overflow-visible">
+                  {[0, 25, 50, 75, 100].map(v => (
+                    <g key={v}>
+                      <line x1="0" y1={v} x2="100" y2={v} stroke="#d5d2c9" strokeWidth="0.5" strokeDasharray="2,2" />
+                      <line x1={v} y1="0" x2={v} y2="100" stroke="#d5d2c9" strokeWidth="0.5" strokeDasharray="2,2" />
+                    </g>
+                  ))}
+                  <line x1="0" y1="100" x2="100" y2="100" stroke="#c27a56" strokeWidth="2" />
+                  <line x1="0" y1="0" x2="0" y2="100" stroke="#c27a56" strokeWidth="2" />
+                  
+                  <motion.polyline 
+                    points={Array.from({length: 101}).map((_, i) => {
+                      const t = (i / 100) * maxGraphTime;
+                      const v = initialVel2 - (accel * t);
+                      const displayT = (t / maxGraphTime) * 100;
+                      // Mapping: v can be negative. 100 = -40, 0 = 40
+                      const displayV = 50 - (v / 80) * 100;
+                      return t <= graphTime ? `${displayT},${displayV}` : '';
+                    }).filter(p => p !== '').join(' ')}
+                    fill="none" 
+                    stroke="#c27a56" 
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  {graphTime > 0 && (
+                    <circle 
+                      cx={(graphTime / maxGraphTime) * 100} 
+                      cy={50 - ((initialVel2 - (accel * graphTime)) / 80) * 100} 
+                      r="4" fill="#c27a56" 
+                    />
+                  )}
+                </svg>
+              </div>
             </div>
           </div>
 
-          <div className="bg-nat-light border-t border-nat-border flex flex-col md:flex-row items-center p-6 md:px-10 gap-8 shrink-0">
-            <div className="flex-1 w-full flex gap-8">
-              <div className="flex-1">
-                <div className="flex justify-between mb-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Initial Velocity (u)</label>
-                  <span className="text-xs font-mono text-nat-muted">{initialVel2} m/s</span>
+          <div className="bg-nat-panel border-t border-nat-border flex flex-col p-8 gap-8 shrink-0">
+             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white p-5 rounded-2xl border border-nat-border shadow-sm group hover:border-[#8c9c75]/30 transition-colors">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-[#8c9c75]/10 rounded-lg text-[#8c9c75]">
+                      <Gauge className="w-4 h-4" />
+                    </div>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Initial Velocity (u)</label>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[#8c9c75] bg-nat-light px-2 py-1 rounded border border-nat-border">{initialVel2} m/s</span>
                 </div>
                 <input 
-                  type="range" 
-                  min="0" max="25" step="1" 
+                  type="range" min="0" max="40" step="1" 
                   value={initialVel2} 
                   onChange={(e) => { setInitialVel2(Number(e.target.value)); resetGraphs(); }}
-                  className="w-full accent-nat-primary"
+                  className="w-full h-2 bg-nat-light rounded-lg appearance-none cursor-pointer accent-[#8c9c75]"
                   disabled={playGraphs && graphTime > 0}
                 />
               </div>
-              <div className="flex-1">
-                <div className="flex justify-between mb-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Acceleration (a)</label>
-                  <span className="text-xs font-mono text-nat-muted">{accel} m/s²</span>
+
+              <div className="bg-white p-5 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-accent/30 transition-colors">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-nat-accent/10 rounded-lg text-nat-accent">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Grav. Acceleration (g)</label>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-nat-accent bg-nat-light px-2 py-1 rounded border border-nat-border">{accel} m/s²</span>
                 </div>
                 <input 
-                  type="range" 
-                  min="-5" max="10" step="1" 
+                  type="range" min="1" max="20" step="0.5" 
                   value={accel} 
                   onChange={(e) => { setAccel(Number(e.target.value)); resetGraphs(); }}
-                  className="w-full accent-nat-primary"
+                  className="w-full h-2 bg-nat-light rounded-lg appearance-none cursor-pointer accent-nat-accent"
                   disabled={playGraphs && graphTime > 0}
                 />
               </div>
             </div>
-            
-             <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-               <div className="flex gap-4 mr-4 text-[10px] uppercase font-bold text-nat-muted tracking-wide text-right">
-                <div>
-                  <div className="mb-0.5">Time</div>
-                  <div className="font-mono text-nat-primary">{graphTime.toFixed(1)}s</div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-6 bg-white px-6 py-3 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-nat-muted">Analysis Time</span>
+                  <span className="text-sm font-mono font-bold text-nat-primary italic">{graphTime.toFixed(2)}s</span>
+                </div>
+                <div className="w-[1px] h-8 bg-nat-border"></div>
+                <div className="flex flex-col">
+                   <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-nat-muted">Point Velocity</span>
+                   <span className="text-sm font-mono font-bold text-nat-primary italic">{(initialVel2 - (accel * graphTime)).toFixed(1)} m/s</span>
                 </div>
               </div>
 
-               <button onClick={resetGraphs} className="px-4 py-3 bg-white text-nat-dark rounded-full text-xs font-bold uppercase tracking-widest border border-nat-border hover:bg-nat-panel transition-colors">
-                Reset
-              </button>
-              
-              {playGraphs ? (
-                <button onClick={() => setPlayGraphs(false)} className="px-6 py-3 bg-[#c27a56] text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#a05a36] transition-colors">
-                  Pause
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={resetGraphs} 
+                  className="px-5 py-3 bg-white text-nat-dark rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] border border-nat-border hover:bg-nat-panel hover:text-nat-primary transition-all flex items-center gap-2 shadow-sm active:scale-95"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Clear Data
                 </button>
-              ) : (
-                <button onClick={() => setPlayGraphs(true)} className="px-6 py-3 bg-nat-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-nat-primary-hover transition-colors">
-                  {graphTime > 0 ? "Resume" : "Run"}
-                </button>
-              )}
-             </div>
+                
+                {playGraphs ? (
+                  <button 
+                    onClick={() => setPlayGraphs(false)} 
+                    className="px-8 py-3 bg-nat-accent text-white rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-nat-accent/90 transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                  >
+                    <Pause className="w-4 h-4 fill-current" />
+                    Pause
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setPlayGraphs(true)} 
+                    className="px-8 py-3 bg-nat-primary text-white rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-nat-primary-hover transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    {graphTime > 0 ? "Resume" : "Plot Logic"}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </>
       )}

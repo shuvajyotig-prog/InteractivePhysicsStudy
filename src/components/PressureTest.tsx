@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { generatePressureTest, QuizQuestion } from '../services/ai';
+import { generateQuestion, QuizQuestion } from '../services/ai';
 import { Loader2, CheckCircle2, XCircle, ArrowRight, Award } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface PressureTestProps {
@@ -12,7 +12,8 @@ interface PressureTestProps {
 }
 
 export function PressureTest({ grade, topic }: PressureTestProps) {
-  const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | null>(null);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -21,68 +22,93 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [mistakesLog, setMistakesLog] = useState<string[]>([]);
+  const [results, setResults] = useState<boolean[]>([]);
 
-  const loadQuestions = async () => {
+  const startTest = (selectedDifficulty: 'easy' | 'medium' | 'hard') => {
+    setDifficulty(selectedDifficulty);
+    setResults([]);
+    loadNextQuestion(selectedDifficulty, []);
+  };
+
+  const loadNextQuestion = async (
+    currentDifficulty: 'easy' | 'medium' | 'hard',
+    history: { question: string; isCorrect: boolean }[]
+  ) => {
     setIsLoading(true);
     setError(null);
-    setSelectedOption(null);
-    setIsSubmitted(false);
-    setCurrentIndex(0);
-    setScore(0);
-    setIsFinished(false);
-    setMistakesLog([]);
     try {
-      const qs = await generatePressureTest(grade, topic);
-      setQuestions(qs);
+      const q = await generateQuestion(grade, topic, currentDifficulty, history);
+      setQuestions(prev => [...prev, q]);
     } catch (err) {
-      setError("Failed to load questions. Please try again.");
+      setError("Failed to load question. Please try again.");
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const currentQuestion = questions ? questions[currentIndex] : null;
+  const currentQuestion = questions[currentIndex];
 
   const handleSubmit = () => {
     if (selectedOption !== null && currentQuestion) {
       setIsSubmitted(true);
-      if (selectedOption === currentQuestion.correctOptionIndex) {
+      const isCorrect = selectedOption === currentQuestion.correctOptionIndex;
+      setResults(prev => [...prev, isCorrect]);
+      if (isCorrect) {
         setScore(prev => prev + 1);
       } else {
-        // Log mistake text
         setMistakesLog(prev => [...prev, currentQuestion.explanation]);
       }
     }
   };
 
   const handleNext = async () => {
-    if (questions && currentIndex < questions.length - 1) {
+    const isCorrect = selectedOption === currentQuestion.correctOptionIndex;
+    
+    const updatedHistory = questions.map((q, i) => ({ 
+      question: q.question, 
+      isCorrect: i < results.length ? results[i] : isCorrect
+    }));
+    
+    if (currentIndex < 4) {
       setCurrentIndex(prev => prev + 1);
       setSelectedOption(null);
       setIsSubmitted(false);
+      await loadNextQuestion(difficulty!, updatedHistory);
     } else {
       setIsFinished(true);
       
       // Save attempt to Firebase
       if (auth.currentUser) {
+        const pathForWrite = `users/${auth.currentUser.uid}/attempts`;
         try {
-          // Check what the user got right/wrong
-          await addDoc(collection(db, `users/${auth.currentUser.uid}/attempts`), {
+          await addDoc(collection(db, pathForWrite), {
             topicId: topic,
-            score: score + (selectedOption === currentQuestion?.correctOptionIndex ? 1 : 0),
+            score: score + (isCorrect ? 1 : 0),
             total: 5,
+            difficulty,
             date: serverTimestamp(),
-            mistakes: selectedOption === currentQuestion?.correctOptionIndex ? mistakesLog : [...mistakesLog, currentQuestion?.explanation]
+            mistakes: isCorrect ? mistakesLog : [...mistakesLog, currentQuestion.explanation]
           });
         } catch (e) {
           console.error("Failed to save attempt to log", e);
+          handleFirestoreError(e, OperationType.WRITE, pathForWrite);
         }
       }
     }
   };
 
-  if (!questions && !isLoading && !error) {
+  const resetTest = () => {
+    setDifficulty(null);
+    setQuestions([]);
+    setCurrentIndex(0);
+    setScore(0);
+    setIsFinished(false);
+    setMistakesLog([]);
+    setError(null);
+  };
+
+  if (!difficulty && !isFinished) {
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl shadow-inner border border-nat-border text-center min-h-[400px]">
         <div className="w-16 h-16 bg-nat-secondary rounded-full flex items-center justify-center mb-4 text-white">
@@ -90,14 +116,25 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
         </div>
         <h3 className="text-xl font-bold text-nat-dark mb-2 font-serif italic">Ready for a Pressure Test?</h3>
         <p className="text-nat-muted max-w-md mb-6 text-sm">
-          Test your conceptual understanding of {topic}. Our AI teacher will generate 5 challenging questions designed to catch common misconceptions.
+          Test your conceptual understanding of {topic}. Select a difficulty level to begin.
         </p>
-        <button 
-          onClick={loadQuestions}
-          className="bg-nat-primary text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-nat-primary-hover transition-colors flex items-center gap-2"
-        >
-          Generate Concept Test
-        </button>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-md">
+          {(['easy', 'medium', 'hard'] as const).map((level) => (
+            <button
+              key={level}
+              onClick={() => startTest(level)}
+              className={cn(
+                "py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all border-2",
+                level === 'easy' && "border-[#84cc16] text-[#4d7c0f] hover:bg-[#84cc16] hover:text-white",
+                level === 'medium' && "border-[#f59e0b] text-[#b45309] hover:bg-[#f59e0b] hover:text-white",
+                level === 'hard' && "border-[#ef4444] text-[#b91c1c] hover:bg-[#ef4444] hover:text-white"
+              )}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -110,15 +147,15 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
         </div>
         <h3 className="text-2xl font-bold text-nat-dark mb-2 font-serif italic">Test Complete!</h3>
         <p className="text-nat-text max-w-md mb-6 text-lg font-medium">
-          You scored <span className="font-bold text-nat-primary">{score}</span> out of <span className="font-bold">5</span>.
+          Level: <span className="uppercase text-nat-primary">{difficulty}</span> • Score: <span className="font-bold text-nat-primary">{score}</span> / 5
         </p>
         <div className="text-sm text-nat-muted max-w-md mb-8">
-          {score === 5 ? "Perfect score! You have a flawless understanding of this topic." :
+          {score === 5 ? "Perfect score! You have a flawless understanding of this level." :
            score >= 3 ? "Great job! A solid grasp of the concepts, but there's a little room for review." :
            "Keep studying! These were tough conceptual questions. Review the mistakes sections in the Concept Builder."}
         </div>
         <button 
-          onClick={loadQuestions}
+          onClick={resetTest}
           className="bg-nat-dark text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-black transition-colors flex items-center gap-2"
         >
           Retake Test
@@ -132,9 +169,9 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
       <div className="p-6 border-b border-nat-border flex justify-between items-center bg-nat-panel-alt">
         <h3 className="font-bold text-nat-dark flex items-center gap-2 text-sm uppercase tracking-widest">
           <span className="w-2 h-2 rounded-full bg-nat-secondary"></span>
-          Pressure Test: {topic} ({currentIndex + 1}/5)
+          Pressure Test ({difficulty?.toUpperCase()}): {currentIndex + 1}/5
         </h3>
-        {isSubmitted && (
+        {isSubmitted && !isLoading && (
           <button 
             onClick={handleNext}
             className="text-xs font-bold uppercase tracking-widest text-nat-primary hover:text-nat-primary-hover flex items-center gap-1"
@@ -149,12 +186,12 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="w-8 h-8 text-nat-primary animate-spin mb-4" />
-            <p className="text-nat-muted text-xs font-bold uppercase tracking-widest animate-pulse">Our AI is crafting 5 challenges...</p>
+            <p className="text-nat-muted text-xs font-bold uppercase tracking-widest animate-pulse">Our AI is crafting your next challenge...</p>
           </div>
         ) : error ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-nat-border border-dashed">
             <p className="text-[#991b1b] mb-4 text-sm font-bold">{error}</p>
-            <button onClick={loadQuestions} className="text-nat-primary font-bold text-xs uppercase tracking-widest underline">Try Again</button>
+            <button onClick={() => difficulty && loadNextQuestion(difficulty, [])} className="text-nat-primary font-bold text-xs uppercase tracking-widest underline">Try Again</button>
           </div>
         ) : currentQuestion ? (
           <motion.div 

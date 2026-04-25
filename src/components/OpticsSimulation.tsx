@@ -1,18 +1,60 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Eye, Settings2, Sliders, Info, Zap, Sparkles } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+type OpticsMode = 'refraction' | 'lens' | 'mirror' | 'wave';
 
 export function OpticsSimulation() {
+  const [mode, setMode] = useState<OpticsMode>('refraction');
+  
+  // Spectral parameters
+  const [wavelength, setWavelength] = useState(550); // nm (Green default)
+  
+  // Refraction state
   const [angle1, setAngle1] = useState(45);
-  const [n1, setN1] = useState(1.0); // Air
-  const [n2, setN2] = useState(1.5); // Glass
+  const [n1Base, setN1Base] = useState(1.0); 
+  const [n2Base, setN2Base] = useState(1.5); 
+  
+  // Compute dispersive indices (Simplified Cauchy equation: n = n_base + B/λ^2)
+  const B_const = 0.04; 
+  const n1 = n1Base + (B_const * 250000) / (wavelength * wavelength);
+  const n2 = n2Base + (B_const * 250000) / (wavelength * wavelength);
+
+  // Lens state
+  const [focalLength, setFocalLength] = useState(150);
+  const [sphericalAberration, setSphericalAberration] = useState(0.2);
+  const [chromaticAberration, setChromaticAberration] = useState(0.2);
+
+  // Mirror state
+  const [mirrorFocal, setMirrorFocal] = useState(150);
+  const [isConcave, setIsConcave] = useState(true);
+
+  // Wave state
+  const [slitWidth, setSlitWidth] = useState(20);
+  const [slitDistance, setSlitDistance] = useState(50);
+  const [isDoubleSlit, setIsDoubleSlit] = useState(false);
+
+  // Utility to get color from wavelength
+  const wavelengthToHex = (nm: number) => {
+    if (nm < 440) return '#8b5cf6'; // Violet
+    if (nm < 480) return '#3b82f6'; // Blue
+    if (nm < 510) return '#06b6d4'; // Cyan
+    if (nm < 580) return '#22c55e'; // Green
+    if (nm < 610) return '#eab308'; // Yellow
+    if (nm < 670) return '#f97316'; // Orange
+    return '#ef4444'; // Red
+  };
+
+  const currentColor = wavelengthToHex(wavelength);
 
   const angle1Rad = (angle1 * Math.PI) / 180;
   
   // Snell's law: n1 * sin(θ1) = n2 * sin(θ2)
-  // sin(θ2) = (n1 / n2) * sin(θ1)
   const sinTheta2 = (n1 / n2) * Math.sin(angle1Rad);
   
   let angle2Rad = 0;
-  let isTIR = false; // Total Internal Reflection
+  let isTIR = false; 
 
   if (Math.abs(sinTheta2) > 1) {
     isTIR = true;
@@ -26,113 +68,452 @@ export function OpticsSimulation() {
   const height = 400;
   const cx = width / 2;
   const cy = height / 2;
-  const rayLength = 300;
 
-  // Incident ray
-  const incX = cx - rayLength * Math.sin(angle1Rad);
-  const incY = cy - rayLength * Math.cos(angle1Rad);
+  // Render Refraction Lab
+  const renderRefraction = () => {
+    const rayLength = 300;
+    const incX = cx - rayLength * Math.sin(angle1Rad);
+    const incY = cy - rayLength * Math.cos(angle1Rad);
+    const refX = cx + rayLength * Math.sin(angle2Rad);
+    const refY = cy + rayLength * Math.cos(angle2Rad);
+    const reflX = cx + rayLength * Math.sin(angle1Rad);
+    const reflY = cy - rayLength * Math.cos(angle1Rad);
 
-  // Refracted ray (if no TIR)
-  const refX = cx + rayLength * Math.sin(angle2Rad);
-  const refY = cy + rayLength * Math.cos(angle2Rad);
+    return (
+      <>
+        <rect x="0" y="0" width={width} height={height/2} fill="#fdfcf9" />
+        <text x="20" y="30" fontSize="10" fill="#a05a36" fontWeight="bold" className="uppercase tracking-widest">Medium 1 (n₁ ≈ {n1.toFixed(2)})</text>
+        
+        <rect x="0" y={height/2} width={width} height={height/2} fill="#eff0e8" opacity="0.6" />
+        <text x="20" y={height - 20} fontSize="10" fill="#5a5a40" fontWeight="bold" className="uppercase tracking-widest">Medium 2 (n₂ ≈ {n2.toFixed(2)})</text>
 
-  // Reflected ray
-  const reflX = cx + rayLength * Math.sin(angle1Rad);
-  const reflY = cy - rayLength * Math.cos(angle1Rad);
+        <line x1={cx} y1="0" x2={cx} y2={height} stroke="#d5d2c9" strokeWidth="1" strokeDasharray="6,6" />
+        <line x1="0" y1={cy} x2={width} y2={cy} stroke="#8a8a70" strokeWidth="1" />
+
+        {/* Incident Angle Arc */}
+        <path d={`M ${cx} ${cy - 40} A 40 40 0 0 0 ${cx - 40 * Math.sin(angle1Rad)} ${cy - 40 * Math.cos(angle1Rad)}`} fill="none" stroke={currentColor} strokeWidth="2" opacity="0.5" />
+        <text 
+          x={cx - 50 * Math.sin(angle1Rad/2)} 
+          y={cy - 50 * Math.cos(angle1Rad/2)} 
+          fontSize="12" fill={currentColor} fontWeight="bold" textAnchor="end" className="font-mono"
+        >
+          {angle1}°
+        </text>
+
+        {/* Refracted Angle Arc - Measured from Interface (Inverted) */}
+        {!isTIR && (
+          <>
+            <path 
+              d={`M ${cx + 40} ${cy} A 40 40 0 0 1 ${cx + 40 * Math.sin(angle2Rad)} ${cy + 40 * Math.cos(angle2Rad)}`} 
+              fill="none" stroke="#ea580c" strokeWidth="2" opacity="0.5" 
+            />
+            <text 
+              x={cx + 50 * Math.cos((Math.PI/2 - angle2Rad)/2)} 
+              y={cy + 50 * Math.sin((Math.PI/2 - angle2Rad)/2)} 
+              fontSize="12" fill="#ea580c" fontWeight="bold" className="font-mono"
+            >
+              {(90 - angle2).toFixed(1)}°
+            </text>
+          </>
+        )}
+
+        {/* Rays */}
+        <line x1={incX} y1={incY} x2={cx} y2={cy} stroke={currentColor} strokeWidth="4" strokeLinecap="round" />
+        <line x1={cx} y1={cy} x2={reflX} y2={reflY} stroke={currentColor} strokeWidth={isTIR ? 4 : 1.5} opacity={isTIR ? 1 : 0.2} strokeLinecap="round" />
+
+        {!isTIR && (
+          <line x1={cx} y1={cy} x2={refX} y2={refY} stroke={currentColor} strokeWidth="4" strokeLinecap="round" />
+        )}
+
+        {isTIR && (
+           <text x={cx + 20} y={cy - 20} fontSize="14" fill={currentColor} fontWeight="bold" className="italic font-serif">Total Internal Reflection</text>
+        )}
+      </>
+    );
+  };
+
+  // Render Lens Lab
+  const renderLens = () => {
+    const lensX = 100;
+    const numRays = 7;
+    const raySpacing = 20;
+    const startX = 20;
+
+    return (
+      <>
+        <line x1="0" y1={cy} x2={width} y2={cy} stroke="#d5d2c9" strokeWidth="1" strokeDasharray="5,5" />
+        <path 
+           d={`M ${lensX} ${cy-80} Q ${lensX + 15} ${cy} ${lensX} ${cy+80} Q ${lensX - 15} ${cy} ${lensX} ${cy-80}`}
+           fill="rgba(186, 230, 253, 0.4)"
+           stroke="#0ea5e9"
+           strokeWidth="2"
+        />
+        <text x={lensX - 20} y={cy + 100} fontSize="10" fill="#0ea5e9" fontWeight="bold" className="uppercase tracking-widest text-center">Biconvex Lens</text>
+
+        {Array.from({ length: numRays }).map((_, i) => {
+          const yOffset = (i - Math.floor(numRays / 2)) * raySpacing;
+          const saFactor = (yOffset * yOffset) / 200 * sphericalAberration;
+          
+          // Chromatic dispersion: n varies with wavelength, focal length f ∝ 1/(n-1)
+          const dispersionShift = (wavelength - 550) * chromaticAberration * 0.2;
+          const currentF = focalLength - saFactor + dispersionShift;
+          const focusX = lensX + currentF;
+          
+          return (
+            <g key={`ray-${i}`}>
+              <line x1={startX} y1={cy + yOffset} x2={lensX} y2={cy + yOffset} stroke={currentColor} strokeWidth={2} opacity={0.4} />
+              <line 
+                x1={lensX} y1={cy + yOffset} 
+                x2={width} y2={cy + (yOffset * (width - lensX) / (lensX - focusX))} 
+                stroke={currentColor} 
+                strokeWidth={2} 
+                opacity={0.7} 
+              />
+              <circle cx={focusX} cy={cy} r="2" fill={currentColor} opacity={0.3} />
+            </g>
+          );
+        })}
+      </>
+    );
+  };
+
+  // Render Mirror Lab
+  const renderMirror = () => {
+    const mirrorX = 400;
+    const numRays = 5;
+    const raySpacing = 30;
+    const startX = 20;
+
+    return (
+      <>
+        <line x1="0" y1={cy} x2={width} y2={cy} stroke="#d5d2c9" strokeWidth="1" strokeDasharray="5,5" />
+        
+        {/* Mirror Shape */}
+        <path 
+          d={isConcave 
+            ? `M ${mirrorX} ${cy-100} Q ${mirrorX - 40} ${cy} ${mirrorX} ${cy+100}`
+            : `M ${mirrorX} ${cy-100} Q ${mirrorX + 40} ${cy} ${mirrorX} ${cy+100}`
+          }
+          fill="none"
+          stroke="#94a3b8"
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <text x={mirrorX - 40} y={cy + 130} fontSize="10" fill="#64748b" fontWeight="bold" className="uppercase tracking-widest">{isConcave ? 'Concave' : 'Convex'} Mirror</text>
+
+        {Array.from({ length: numRays }).map((_, i) => {
+          const yOffset = (i - Math.floor(numRays / 2)) * raySpacing;
+          if (yOffset === 0) return null;
+
+          // Paraxial approx: Reflection angle = incidence angle
+          // Concave reflects to focal point f = R/2
+          const f = mirrorFocal * (isConcave ? 1 : -1);
+          const focusX = mirrorX - f;
+
+          return (
+            <g key={`mirror-ray-${i}`}>
+              <line x1={startX} y1={cy + yOffset} x2={mirrorX - (isConcave ? 10 : -10)} y2={cy + yOffset} stroke={currentColor} strokeWidth={2} opacity={0.4} />
+              <line 
+                x1={mirrorX - (isConcave ? 10 : -10)} y1={cy + yOffset} 
+                x2={0} y2={cy + (yOffset * (0 - mirrorX) / (mirrorX - focusX))} 
+                stroke={currentColor} 
+                strokeWidth={2} 
+                opacity={0.8} 
+              />
+            </g>
+          );
+        })}
+      </>
+    );
+  };
+
+  // Render Wave Lab (Diffraction/Interference)
+  const renderWave = () => {
+    const barrierX = 150;
+    const screenX = 550;
+    const patternWidth = screenX - barrierX;
+
+    return (
+      <>
+        {/* Barrier */}
+        <line x1={barrierX} y1={0} x2={barrierX} y2={cy - slitWidth/2} stroke="#334155" strokeWidth="4" />
+        <line x1={barrierX} y1={cy + slitWidth/2} x2={barrierX} y2={height} stroke="#334155" strokeWidth="4" />
+        
+        {isDoubleSlit && (
+          <>
+            <rect x={barrierX-2} y={cy - slitDistance/2 - slitWidth/2} width="4" height={slitWidth} fill="white" stroke="#334155" strokeWidth="1" />
+            <rect x={barrierX-2} y={cy + slitDistance/2 - slitWidth/2} width="4" height={slitWidth} fill="white" stroke="#334155" strokeWidth="1" />
+            <line x1={barrierX} y1={cy - slitDistance/2 + slitWidth/2} x2={barrierX} y2={cy + slitDistance/2 - slitWidth/2} stroke="#334155" strokeWidth="4" />
+          </>
+        )}
+
+        {/* Screen */}
+        <line x1={screenX} y1={0} x2={screenX} y2={height} stroke="#000" strokeWidth="2" />
+        
+        {/* Pattern Visualization */}
+        {Array.from({ length: 100 }).map((_, i) => {
+          const y = (i / 100) * height;
+          const theta = Math.atan((y - cy) / patternWidth);
+          
+          // Diffraction: I = I0 * [sin(β)/β]^2 where β = (π*slitWidth/λ) * sin(θ)
+          const beta = (Math.PI * (slitWidth * 50) / wavelength) * Math.sin(theta);
+          const diffraction = Math.pow(beta === 0 ? 1 : Math.sin(beta) / beta, 2);
+          
+          // Interference: I = I_diff * cos^2(δ) where δ = (π*slitDistance/λ) * sin(θ)
+          let intensity = diffraction;
+          if (isDoubleSlit) {
+            const delta = (Math.PI * (slitDistance * 100) / wavelength) * Math.sin(theta);
+            intensity *= Math.pow(Math.cos(delta), 2);
+          }
+
+          return (
+            <rect 
+              key={`fringe-${i}`}
+              x={screenX + 5} y={y} 
+              width="20" height={height/100}
+              fill={currentColor}
+              opacity={intensity}
+            />
+          );
+        })}
+
+        <text x={screenX - 80} y={30} fontSize="10" fill="#000" fontWeight="bold" className="uppercase tracking-widest">Intensity Pattern</text>
+      </>
+    );
+  };
 
   return (
-    <div className="bg-white rounded-3xl border border-nat-border shadow-inner relative flex flex-col overflow-hidden w-full">
-      <div className="absolute top-6 left-6 z-10 pointer-events-none bg-white/80 p-2 rounded-xl backdrop-blur-sm">
-        <h3 className="text-2xl font-serif italic text-nat-dark leading-tight">Interactive Lab: Refraction</h3>
-        <p className="text-sm text-nat-muted">Observe Snell's Law & Total Internal Reflection.</p>
+    <div className="bg-white rounded-3xl border border-nat-border shadow-sm flex flex-col overflow-hidden w-full h-full">
+      {/* Header */}
+      <div className="p-6 border-b border-nat-border flex justify-between items-center bg-nat-panel-alt/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-nat-primary/10 rounded-xl">
+            <Eye className="w-5 h-5 text-nat-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-nat-dark font-serif italic leading-tight">Optics Laboratory</h3>
+            <p className="text-[10px] text-nat-muted uppercase tracking-[0.2em] font-bold">Refraction & Lens Aberrations</p>
+          </div>
+        </div>
+        
+        <div className="flex bg-nat-light p-1 rounded-xl border border-nat-border overflow-x-auto">
+          {[
+            { id: 'refraction', label: "Snell's Law" },
+            { id: 'lens', label: 'Lens Lab' },
+            { id: 'mirror', label: 'Mirrors' },
+            { id: 'wave', label: 'Wave Patterns' }
+          ].map(opt => (
+            <button 
+              key={opt.id}
+              onClick={() => setMode(opt.id as OpticsMode)}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                mode === opt.id ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="relative flex-1 min-h-[350px] flex items-center justify-center bg-white overflow-hidden">
-        <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
-          {/* Medium 1 (Top) */}
-          <rect x="0" y="0" width={width} height={height/2} fill="#fdfcf9" />
-          <text x="20" y="30" fontSize="14" fill="#a05a36" fontWeight="bold">Medium 1 (n₁ = {n1.toFixed(2)})</text>
-          
-          {/* Medium 2 (Bottom) */}
-          <rect x="0" y={height/2} width={width} height={height/2} fill="#eff0e8" opacity="0.6" />
-          <text x="20" y={height - 20} fontSize="14" fill="#5a5a40" fontWeight="bold">Medium 2 (n₂ = {n2.toFixed(2)})</text>
+      <div className="relative flex-1 min-h-[400px] flex items-center justify-center bg-white overflow-hidden p-4">
+        <svg 
+           width="100%" 
+           height="100%" 
+           viewBox={`0 0 ${width} ${height}`} 
+           preserveAspectRatio="xMidYMid meet"
+           className="max-w-full drop-shadow-sm"
+        >
+          {mode === 'refraction' && renderRefraction()}
+          {mode === 'lens' && renderLens()}
+          {mode === 'mirror' && renderMirror()}
+          {mode === 'wave' && renderWave()}
+        </svg>
+        
+        <div className="absolute bottom-6 right-6 flex items-start gap-3 max-w-[250px] bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-nat-border shadow-md">
+           <Zap className={cn("w-4 h-4 mt-0.5", mode === 'wave' ? "text-purple-500" : "text-nat-accent")} />
+           <p className="text-[11px] text-nat-text leading-relaxed font-medium italic">
+             {mode === 'refraction' && "Note how the ray bends toward the normal in denser media. n is wavelength-dependent (Cauchy dispersion)."}
+             {mode === 'lens' && "Observe chromatic aberration: different wavelengths focus at slightly different points."}
+             {mode === 'mirror' && "Mirrors use reflection laws. Convex mirrors always produce virtual, upright, and diminished images."}
+             {mode === 'wave' && "Diffraction (bending around corners) and Interference (superposition) reveal the wave nature of light."}
+           </p>
+        </div>
+      </div>
 
-          {/* Interface Normal */}
-          <line x1={cx} y1="0" x2={cx} y2={height} stroke="#d5d2c9" strokeWidth="2" strokeDasharray="6,6" />
-          
-          {/* Interface Line */}
-          <line x1="0" y1={cy} x2={width} y2={cy} stroke="#8a8a70" strokeWidth="2" />
+      {/* Controls */}
+      <div className="bg-nat-panel border-t border-nat-border p-6 md:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+          {/* Universal Wavelength Slider */}
+          <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm ring-1 ring-nat-primary/5">
+            <div className="flex justify-between mb-3 text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+              <label>Wavelength</label>
+              <span className="font-mono" style={{ color: currentColor }}>{wavelength}nm</span>
+            </div>
+            <input 
+              type="range" min="380" max="750" step="10" 
+              value={wavelength} onChange={(e) => setWavelength(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+              style={{ background: `linear-gradient(to right, #8b5cf6, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316, #ef4444)` }}
+            />
+          </div>
 
-          {/* Angles Arcs */}
-          {/* Incident Arc */}
-          <path d={`M ${cx} ${cy - 40} A 40 40 0 0 0 ${cx - 40 * Math.sin(angle1Rad)} ${cy - 40 * Math.cos(angle1Rad)}`} fill="none" stroke="#e11d48" strokeWidth="2" />
-          <text x={cx - 15 - 30 * Math.sin(angle1Rad/2)} y={cy - 15 - 30 * Math.cos(angle1Rad/2)} fontSize="12" fill="#e11d48">{angle1}°</text>
-
-          {/* Incident Ray */}
-          <line x1={incX} y1={incY} x2={cx} y2={cy} stroke="#e11d48" strokeWidth="4" />
-          
-          {/* Reflected Ray (faint mostly, bright if TIR) */}
-          <line x1={cx} y1={cy} x2={reflX} y2={reflY} stroke="#e11d48" strokeWidth={isTIR ? 4 : 1.5} opacity={isTIR ? 1 : 0.3} />
-
-          {/* Refracted Ray */}
-          {!isTIR && (
+          {mode === 'refraction' && (
             <>
-              <line x1={cx} y1={cy} x2={refX} y2={refY} stroke="#ea580c" strokeWidth="4" />
-              <path d={`M ${cx} ${cy + 40} A 40 40 0 0 1 ${cx + 40 * Math.sin(angle2Rad)} ${cy + 40 * Math.cos(angle2Rad)}`} fill="none" stroke="#ea580c" strokeWidth="2" />
-              <text x={cx + 15 + 30 * Math.sin(angle2Rad/2)} y={cy + 15 + 30 * Math.cos(angle2Rad/2)} fontSize="12" fill="#ea580c">{angle2.toFixed(1)}°</text>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Incidence θ₁</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{angle1}°</span>
+                </div>
+                <input 
+                  type="range" min="0" max="89" step="1" 
+                  value={angle1} onChange={(e) => setAngle1(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Medium 1 (n₀)</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{n1Base.toFixed(2)}</span>
+                </div>
+                <input 
+                  type="range" min="1.0" max="2.5" step="0.05" 
+                  value={n1Base} onChange={(e) => setN1Base(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Medium 2 (n₀)</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{n2Base.toFixed(2)}</span>
+                </div>
+                <input 
+                  type="range" min="1.0" max="2.5" step="0.05" 
+                  value={n2Base} onChange={(e) => setN2Base(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
             </>
           )}
 
-          {isTIR && (
-             <text x={cx + 20} y={cy - 20} fontSize="14" fill="#e11d48" fontWeight="bold">Total Internal Reflection</text>
+          {mode === 'lens' && (
+            <>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Focus Point</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{focalLength}</span>
+                </div>
+                <input 
+                  type="range" min="100" max="250" step="10" 
+                  value={focalLength} onChange={(e) => setFocalLength(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Spherical Ab.</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{(sphericalAberration * 100).toFixed(0)}%</span>
+                </div>
+                <input 
+                  type="range" min="0" max="1" step="0.05" 
+                  value={sphericalAberration} onChange={(e) => setSphericalAberration(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Dispersion</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{(chromaticAberration * 100).toFixed(0)}%</span>
+                </div>
+                <input 
+                  type="range" min="0" max="1" step="0.05" 
+                  value={chromaticAberration} onChange={(e) => setChromaticAberration(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+            </>
           )}
 
-        </svg>
-      </div>
+          {mode === 'mirror' && (
+            <>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm flex flex-col justify-center">
+                 <div className="flex items-center gap-2 mb-3">
+                    <button 
+                      onClick={() => setIsConcave(true)}
+                      className={cn("flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all", isConcave ? "bg-nat-dark text-white" : "bg-nat-light text-nat-muted")}
+                    >
+                      Concave
+                    </button>
+                    <button 
+                      onClick={() => setIsConcave(false)}
+                      className={cn("flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all", !isConcave ? "bg-nat-dark text-white" : "bg-nat-light text-nat-muted")}
+                    >
+                      Convex
+                    </button>
+                 </div>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm col-span-2">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Mirror Curvature (Focal)</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{mirrorFocal}px</span>
+                </div>
+                <input 
+                  type="range" min="50" max="250" step="10" 
+                  value={mirrorFocal} onChange={(e) => setMirrorFocal(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+            </>
+          )}
 
-      <div className="bg-nat-light border-t border-nat-border flex flex-col md:flex-row items-center p-6 md:px-10 gap-8 shrink-0">
-        <div className="flex-1 w-full flex gap-6">
-          <div className="flex-1">
-            <div className="flex justify-between mb-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Incidence θ₁</label>
-              <span className="text-xs font-mono text-nat-muted">{angle1}°</span>
-            </div>
-            <input 
-              type="range" 
-              min="0" max="89" step="1" 
-              value={angle1} 
-              onChange={(e) => setAngle1(Number(e.target.value))}
-              className="w-full accent-nat-primary"
-            />
-          </div>
-          <div className="flex-1">
-            <div className="flex justify-between mb-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Medium 1 (n₁)</label>
-              <span className="text-xs font-mono text-nat-muted">{n1.toFixed(2)}</span>
-            </div>
-            <input 
-              type="range" 
-              min="1.0" max="2.5" step="0.05" 
-              value={n1} 
-              onChange={(e) => setN1(Number(e.target.value))}
-              className="w-full accent-nat-primary"
-            />
-          </div>
-           <div className="flex-1">
-            <div className="flex justify-between mb-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Medium 2 (n₂)</label>
-              <span className="text-xs font-mono text-nat-muted">{n2.toFixed(2)}</span>
-            </div>
-            <input 
-              type="range" 
-              min="1.0" max="2.5" step="0.05" 
-              value={n2} 
-              onChange={(e) => setN2(Number(e.target.value))}
-              className="w-full accent-nat-primary"
-            />
-          </div>
+          {mode === 'wave' && (
+            <>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Slit Width (a)</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{slitWidth}µm</span>
+                </div>
+                <input 
+                  type="range" min="5" max="50" step="1" 
+                  value={slitWidth} onChange={(e) => setSlitWidth(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark mb-3 block">Pattern Type</label>
+                <div className="flex gap-2">
+                   <button 
+                      onClick={() => setIsDoubleSlit(false)}
+                      className={cn("flex-1 py-2 rounded-lg text-[10px] font-bold transition-all", !isDoubleSlit ? "bg-nat-dark text-white" : "bg-nat-light text-nat-muted")}
+                    >
+                      Single Slit
+                    </button>
+                    <button 
+                      onClick={() => setIsDoubleSlit(true)}
+                      className={cn("flex-1 py-2 rounded-lg text-[10px] font-bold transition-all", isDoubleSlit ? "bg-nat-dark text-white" : "bg-nat-light text-nat-muted")}
+                    >
+                      Double Slit
+                    </button>
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Slit Distance (d)</label>
+                  <span className="text-xs font-mono font-bold text-nat-primary">{slitDistance}µm</span>
+                </div>
+                <input 
+                  type="range" min="20" max="100" step="5" 
+                  value={slitDistance} onChange={(e) => setSlitDistance(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                  disabled={!isDoubleSlit}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

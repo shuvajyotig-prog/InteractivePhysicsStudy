@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Target, AlertCircle, CheckCircle2, TrendingUp, Award, BookOpen, Clock } from 'lucide-react';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 
 interface TestAttempt {
@@ -24,9 +24,10 @@ export function Cockpit() {
         return;
       }
       
+      const pathForGetDocs = `users/${auth.currentUser.uid}/attempts`;
       try {
         const q = query(
-          collection(db, `users/${auth.currentUser.uid}/attempts`),
+          collection(db, pathForGetDocs),
           orderBy('date', 'desc')
         );
         const snapshot = await getDocs(q);
@@ -41,6 +42,7 @@ export function Cockpit() {
         setAttempts(fetchedAttempts);
       } catch (e) {
         console.error("Failed to fetch stats", e);
+        handleFirestoreError(e, OperationType.GET, pathForGetDocs);
       } finally {
         setLoading(false);
       }
