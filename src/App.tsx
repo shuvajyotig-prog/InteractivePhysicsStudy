@@ -8,13 +8,14 @@ import { ConceptBuilder } from './components/ConceptBuilder';
 import { GlobalSearch } from './components/GlobalSearch';
 import { AuthModal } from './components/AuthModal';
 import { OtherSimulations } from './components/OtherSimulations';
-import { BookOpen, Target, FlaskConical, GraduationCap, ChevronRight, Menu, X, CheckSquare, Search, LogIn, LogOut, User } from 'lucide-react';
+import { BookOpen, Target, FlaskConical, GraduationCap, ChevronRight, Menu, X, CheckSquare, Search, LogIn, LogOut, User, ActivitySquare } from 'lucide-react';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { Cockpit } from './components/Cockpit';
 
-type TabView = 'concept' | 'simulation' | 'practice';
+type TabView = 'concept' | 'simulation' | 'practice' | 'cockpit';
 
 export default function App() {
   const [selectedClass, setSelectedClass] = useState<ClassLevel>("11");

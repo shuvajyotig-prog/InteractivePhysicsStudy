@@ -53,6 +53,21 @@ Provide a clear, educational explanation for the correct answer. Returns exactly
   return JSON.parse(text) as QuizQuestion[];
 }
 
+export async function explainFormula(formulaContent: string): Promise<string> {
+  const prompt = `You are an expert Physics teacher. Break down the following physics formula/concept block for a student:
+${formulaContent}
+
+Provide a rich, markdown-formatted explanation.
+Explain what each term means intuitively, the history or derived logic behind it, and a simple real-world analogy. Keep it under 3 paragraphs. Use LaTeX formatting where appropriate.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return response.text || "I ran into an issue breaking down this formula.";
+}
+
 export async function generateDeepDive(grade: string, topic: string, subTopic: string): Promise<string> {
   const prompt = `You are a friendly, rigorous expert CBSE Class ${grade} Physics tutor.
 A student is studying "${topic}" and wants to deeply understand the specific concept/technique: "${subTopic}".
@@ -71,5 +86,25 @@ Keep the tone encouraging. Format beautifully using Markdown. Use bolding and bu
   });
 
   return response.text || "Failed to load deep dive. Please try again.";
+}
+
+export async function solveProblem(problemText: string): Promise<string> {
+  const prompt = `You are an expert Physics tutor. Help the user solve the following problem step-by-step explicitly following Polya's Problem Solving techniques:
+1. Understand the problem (State knowns and unknowns).
+2. Devise a plan (Identify the formula/concepts).
+3. Carry out the plan (Show the math).
+4. Look back (Check the answer conceptually).
+
+Problem:
+${problemText}
+
+Use markdown formatting and clearly label the steps. Use LaTeX formatting in your math blocks.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-pro",
+    contents: prompt,
+  });
+
+  return response.text || "Failed to solve problem.";
 }
 

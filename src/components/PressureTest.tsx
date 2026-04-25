@@ -3,6 +3,8 @@ import { generatePressureTest, QuizQuestion } from '../services/ai';
 import { Loader2, CheckCircle2, XCircle, ArrowRight, Award } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth, db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface PressureTestProps {
   grade: string;
@@ -18,6 +20,7 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
   const [error, setError] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [mistakesLog, setMistakesLog] = useState<string[]>([]);
 
   const loadQuestions = async () => {
     setIsLoading(true);
@@ -27,6 +30,7 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
     setCurrentIndex(0);
     setScore(0);
     setIsFinished(false);
+    setMistakesLog([]);
     try {
       const qs = await generatePressureTest(grade, topic);
       setQuestions(qs);
@@ -45,17 +49,36 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
       setIsSubmitted(true);
       if (selectedOption === currentQuestion.correctOptionIndex) {
         setScore(prev => prev + 1);
+      } else {
+        // Log mistake text
+        setMistakesLog(prev => [...prev, currentQuestion.explanation]);
       }
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (questions && currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedOption(null);
       setIsSubmitted(false);
     } else {
       setIsFinished(true);
+      
+      // Save attempt to Firebase
+      if (auth.currentUser) {
+        try {
+          // Check what the user got right/wrong
+          await addDoc(collection(db, `users/${auth.currentUser.uid}/attempts`), {
+            topicId: topic,
+            score: score + (selectedOption === currentQuestion?.correctOptionIndex ? 1 : 0),
+            total: 5,
+            date: serverTimestamp(),
+            mistakes: selectedOption === currentQuestion?.correctOptionIndex ? mistakesLog : [...mistakesLog, currentQuestion?.explanation]
+          });
+        } catch (e) {
+          console.error("Failed to save attempt to log", e);
+        }
+      }
     }
   };
 

@@ -3,9 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { generateDeepDive } from '../services/ai';
+import { generateDeepDive, explainFormula, solveProblem } from '../services/ai';
 import { getConceptData, ConceptSection } from '../data/concepts';
-import { Loader2, Sparkles, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Beaker, BookOpen, Search } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Beaker, BookOpen, Search, Calculator, Crosshair, PlayCircle, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Topic } from '../data/syllabus';
@@ -18,6 +18,10 @@ interface ConceptBuilderProps {
 export function ConceptBuilder({ grade, topic }: ConceptBuilderProps) {
   const data = getConceptData(topic.id, topic.title);
   const [sectionState, setSectionState] = useState<Record<string, { mainOpen: boolean; aiLoading: boolean; aiContent: string | null; aiOpen: boolean }>>({});
+  const [activeTab, setActiveTab] = useState<'learn' | 'solver'>('learn');
+  const [problemInput, setProblemInput] = useState('');
+  const [problemSolution, setProblemSolution] = useState<string | null>(null);
+  const [isSolving, setIsSolving] = useState(false);
 
   const toggleMain = (id: string) => {
     setSectionState(prev => {
@@ -42,10 +46,29 @@ export function ConceptBuilder({ grade, topic }: ConceptBuilderProps) {
     setSectionState(prev => ({ ...prev, [section.id]: { ...state, aiLoading: true, aiContent: null, aiOpen: true } }));
     
     try {
-      const content = await generateDeepDive(grade, topic.title, section.title);
+      let content = '';
+      if (section.content.includes('$')) {
+         content = await explainFormula(section.content);
+      } else {
+         content = await generateDeepDive(grade, topic.title, section.title);
+      }
       setSectionState(prev => ({ ...prev, [section.id]: { ...prev[section.id], aiLoading: false, aiContent: content, aiOpen: true } }));
     } catch (err) {
       setSectionState(prev => ({ ...prev, [section.id]: { ...prev[section.id], aiLoading: false, aiContent: "Oops! The AI tutor had a hiccup. Please try again.", aiOpen: true } }));
+    }
+  };
+
+  const handleSolveProblem = async () => {
+    if (!problemInput.trim()) return;
+    setIsSolving(true);
+    setProblemSolution(null);
+    try {
+      const solution = await solveProblem(problemInput);
+      setProblemSolution(solution);
+    } catch (e) {
+      setProblemSolution("Failed to generate a solution.");
+    } finally {
+      setIsSolving(false);
     }
   };
 
@@ -91,7 +114,7 @@ export function ConceptBuilder({ grade, topic }: ConceptBuilderProps) {
                   className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-nat-primary hover:text-white hover:bg-nat-primary transition-colors bg-nat-panel border border-nat-border px-4 py-2 rounded-full"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  {state.aiOpen ? "Collapse Deep Dive" : "Summon AI Deep Dive"}
+                  {state.aiOpen ? "Collapse Details" : (section.content.includes('$') ? "Explain Formula" : "Summon AI Deep Dive")}
                 </button>
 
                 <AnimatePresence>
@@ -142,8 +165,54 @@ export function ConceptBuilder({ grade, topic }: ConceptBuilderProps) {
             {data.intro}
           </p>
         </div>
+        <div className="flex px-4 pt-2 gap-4 border-b border-nat-border bg-white">
+          <button 
+            onClick={() => setActiveTab('learn')}
+            className={cn("px-4 py-3 font-bold text-xs uppercase tracking-widest border-b-2 transition-colors", activeTab === 'learn' ? 'text-nat-primary border-nat-primary' : 'text-nat-muted border-transparent hover:text-nat-dark')}
+          >
+            Concepts & Formulas
+          </button>
+          <button 
+            onClick={() => setActiveTab('solver')}
+            className={cn("px-4 py-3 font-bold text-xs uppercase tracking-widest border-b-2 transition-colors flex items-center gap-2", activeTab === 'solver' ? 'text-nat-primary border-nat-primary' : 'text-nat-muted border-transparent hover:text-nat-dark')}
+          >
+            <HelpCircle className="w-4 h-4" /> AI Problem Solver
+          </button>
+        </div>
       </div>
 
+      {activeTab === 'solver' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl p-8 border border-nat-border shadow-sm">
+          <h3 className="text-xl font-serif italic text-nat-dark mb-4">Physics Problem Solver</h3>
+          <p className="text-sm text-nat-muted mb-6">Paste any physics homework problem here, and our AI tutor will break it down step-by-step using Polya's method.</p>
+          
+          <textarea
+            className="w-full h-32 p-4 rounded-xl border border-nat-border bg-nat-light focus:outline-none focus:ring-2 focus:ring-nat-primary focus:bg-white resize-none mb-4"
+            placeholder="E.g., A car accelerates from rest to 20 m/s in 5 seconds. Find its acceleration and distance traveled."
+            value={problemInput}
+            onChange={(e) => setProblemInput(e.target.value)}
+          />
+          
+          <button
+            onClick={handleSolveProblem}
+            disabled={isSolving || !problemInput.trim()}
+            className="px-6 py-3 bg-nat-primary text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-nat-primary-hover transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isSolving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4" />}
+            {isSolving ? "Analyzing..." : "Solve Problem"}
+          </button>
+
+          {problemSolution && !isSolving && (
+            <div className="mt-8 p-6 bg-blue-50 border border-blue-100 rounded-2xl">
+               <div className="prose prose-sm prose-blue max-w-none prose-headings:font-serif prose-headings:text-nat-dark prose-p:leading-relaxed prose-li:my-1">
+                  {renderMarkdown(problemSolution)}
+               </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {activeTab === 'learn' && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Core Principles */}
         <div className="space-y-4">
@@ -214,6 +283,7 @@ export function ConceptBuilder({ grade, topic }: ConceptBuilderProps) {
 
         </div>
       </div>
+      )}
     </div>
   );
 }
