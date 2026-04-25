@@ -186,7 +186,7 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="w-8 h-8 text-nat-primary animate-spin mb-4" />
-            <p className="text-nat-muted text-xs font-bold uppercase tracking-widest animate-pulse">Our AI is crafting your next challenge...</p>
+            <p className="text-nat-muted text-xs font-bold uppercase tracking-widest animate-pulse">Our Tutor is crafting your next challenge...</p>
           </div>
         ) : error ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-nat-border border-dashed">

@@ -15,9 +15,9 @@ export function CircuitSimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner relative flex flex-col overflow-hidden w-full">
-      <div className="absolute top-6 left-6 z-10 pointer-events-none">
-        <h3 className="text-2xl font-serif italic text-nat-dark leading-tight">Interactive Lab: Ohm's Law</h3>
-        <p className="text-sm text-nat-muted">Explore the relationship between V, I, and R.</p>
+      <div className="absolute top-8 left-8 z-10 pointer-events-none">
+        <h3 className="text-xl font-serif italic text-nat-dark leading-tight">Interactive Lab: Ohm's Law</h3>
+        <p className="text-xs text-nat-muted mt-1">Explore the relationship between V, I, and R.</p>
       </div>
 
       <div className="relative flex-1 min-h-[350px] flex items-center justify-center bg-[#fdfcf9]">
@@ -80,30 +80,30 @@ export function CircuitSimulation() {
 
       <div className="bg-nat-light border-t border-nat-border flex flex-col md:flex-row items-center p-6 md:px-10 gap-8 shrink-0">
         <div className="flex-1 w-full flex gap-8">
-          <div className="flex-1">
-            <div className="flex justify-between mb-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Voltage (V)</label>
-              <span className="text-xs font-mono text-nat-muted">{voltage} V</span>
+          <div className="flex-1 flex flex-col gap-3 bg-white p-4 rounded-xl border border-nat-border shadow-sm">
+            <div className="flex justify-between items-center">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark opacity-70">Voltage (V)</label>
+              <span className="text-xs font-mono font-bold text-nat-primary">{voltage} V</span>
             </div>
             <input 
               type="range" 
               min="1" max="24" step="1" 
               value={voltage} 
               onChange={(e) => setVoltage(Number(e.target.value))}
-              className="w-full accent-nat-primary"
+              className="w-full accent-nat-primary cursor-pointer h-1.5"
             />
           </div>
-          <div className="flex-1">
-            <div className="flex justify-between mb-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Resistance (R)</label>
-              <span className="text-xs font-mono text-nat-muted">{resistance} Ω</span>
+          <div className="flex-1 flex flex-col gap-3 bg-white p-4 rounded-xl border border-nat-border shadow-sm">
+            <div className="flex justify-between items-center">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark opacity-70">Resistance (R)</label>
+              <span className="text-xs font-mono font-bold text-nat-primary">{resistance} Ω</span>
             </div>
             <input 
               type="range" 
               min="1" max="24" step="1" 
               value={resistance} 
               onChange={(e) => setResistance(Number(e.target.value))}
-              className="w-full accent-nat-primary"
+              className="w-full accent-nat-primary cursor-pointer h-1.5"
             />
           </div>
         </div>

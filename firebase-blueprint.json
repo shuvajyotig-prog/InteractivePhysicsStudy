@@ -23,9 +23,43 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "createdAt"]
+    },
+    "AICache": {
+      "title": "AI Content Cache",
+      "description": "Stored deep dives and formula explanations",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["dive", "formula", "solve"] },
+        "key": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["content", "type", "key", "createdAt"]
+    },
+    "feedback": {
+      "title": "User Feedback",
+      "description": "Feedback on AI tutor responses",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topic": { "type": "string" },
+        "input": { "type": "string" },
+        "response": { "type": "string" },
+        "isPositive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "topic", "input", "response", "isPositive", "createdAt"]
     }
   },
   "firestore": {
+    "/feedback/{feedbackId}": {
+      "schema": "feedback",
+      "description": "AI Tutor feedback entries"
+    },
+    "/ai_cache/{cacheId}": {
+      "schema": "AICache",
+      "description": "Global cache for AI-generated content"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "User profile data"

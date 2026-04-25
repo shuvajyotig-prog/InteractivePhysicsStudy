@@ -12,6 +12,7 @@ export interface ConceptData {
   techniques: ConceptSection[];
   samples?: ConceptSection[];
   mistakes: ConceptSection[];
+  bridge?: ConceptSection[]; // 40% Extra for Grade 11/12
 }
 
 export const conceptDatabase: Record<string, ConceptData> = {
@@ -97,6 +98,18 @@ export const conceptDatabase: Record<string, ConceptData> = {
         title: "Using constant 'a' formulas for varying forces", 
         content: "The three standard equations of motion ($v=u+at$, etc.) are **only strictly valid when acceleration is perfectly constant**. \n\nIf a force is changing (like a spring pushing an object, or air resistance increasing with speed), you absolutely cannot use these formulas algebraically. You must use calculus (integration)." 
       }
+    ],
+    bridge: [
+      {
+        id: "b1",
+        title: "Calculus in Kinematics (Class 11 Preview)",
+        content: "In Grade 11, we stop assuming acceleration is always constant. We define velocity as the derivative of position ($v = \\frac{dx}{dt}$) and acceleration as the derivative of velocity ($a = \\frac{dv}{dt} = \\frac{d^2x}{dt^2}$).\n\n**Application:** To find displacement from a velocity function $v(t)$, you perform integration: $\\Delta x = \\int v(t) dt$."
+      },
+      {
+        id: "b2",
+        title: "Relative Velocity in 2D",
+        content: "When two objects move in different directions (like a boat crossing a river with a current), we use vector subtraction: $\\vec{v}_{AB} = \\vec{v}_A - \\vec{v}_B$.\n\n**Visual Tip:** The 'Rain-Man' problem or 'River-Swimmer' problem in Grade 11 relies entirely on this vector geometry."
+      }
     ]
   },
   "motion": {
@@ -138,6 +151,18 @@ export const conceptDatabase: Record<string, ConceptData> = {
         id: "m_m1", 
         title: "Speed vs Velocity Mix-Up", 
         content: "Forgetting that velocity requires a direction vector. \n\nIf you drive a car around a circular track at a constant 50 km/h, your **speed is constant**, but your **velocity is constantly changing** because your direction is constantly changing. Therefore, you are accelerating!" 
+      }
+    ],
+    bridge: [
+      {
+        id: "m_b1",
+        title: "Projectile Motion & 2D Kinematics",
+        content: "In Class 9, we only talk about straight-line motion. Class 11 introduces motion in a plane. A projectile fired at angle $\\theta$ has its vertical and horizontal motions completely independent!\n\n**Key Formula:** The horizontal range $R = \\frac{u^2 \\sin 2\\theta}{g}$."
+      },
+      {
+        id: "m_b2",
+        title: "Vector Resolution",
+        content: "Any vector $\\vec{A}$ can be split into two components: $A_x = A \\cos \\theta$ and $A_y = A \\sin \\theta$. This 'component method' is the master key to solving complex physics problems in Grade 11 and 12."
       }
     ]
   },
@@ -193,6 +218,18 @@ export const conceptDatabase: Record<string, ConceptData> = {
         title: "Adding Parallel Resistors Incorrectly",
         content: "Students often add parallel resistors linearly ($R = R_1 + R_2$). The correct formula is $\\frac{1}{R_{eq}} = \\frac{1}{R_1} + \\frac{1}{R_2}$. Remember that adding resistors in parallel *decreases* the total resistance!"
       }
+    ],
+    bridge: [
+      {
+        id: "elec_b1",
+        title: "Drift Velocity & Mobility (Class 12)",
+        content: "In Grade 10, current is just 'flow of charge'. In Grade 12, we learn it's actually the **Drift Velocity ($v_d$)** of electrons through a lattice: $I = nAev_d$. Despite electrons moving slowly (mm/s), the electric field propagates at nearly the speed of light!"
+      },
+      {
+        id: "elec_b2",
+        title: "Kirchhoff's Laws",
+        content: "For complex circuits, Ohm's law isn't enough. We use Kirchhoff's 2 rules:\n1. **Junction Rule (KCL):** Total current entering a junction equals total current leaving (Charge Conservation).\n2. **Loop Rule (KVL):** The sum of potential differences around any closed loop is zero (Energy Conservation)."
+      }
     ]
   },
   "light": {
@@ -229,6 +266,23 @@ export const conceptDatabase: Record<string, ConceptData> = {
         id: "opt_m1",
         title: "Flipping u and v",
         content: "Always ensure $u$ is the object distance and $v$ is the image distance. Since the object is usually placed to the left of the mirror/lens, $u$ is almost always a negative value."
+      }
+    ],
+    bridge: [
+      {
+        id: "opt_b1",
+        title: "The Lens Maker's Formula",
+        content: "Grade 10 uses the lens formula ($1/f = 1/v - 1/u$). Grade 12 derives this using the shape and material of the lens:\n\n### $\\frac{1}{f} = (n - 1) \\left( \\frac{1}{R_1} - \\frac{1}{R_2} \\right)$\n\nWhere $n$ is refractive index and $R$ are the radii of curvature of the lens surfaces."
+      },
+      {
+        id: "opt_b2",
+        title: "Wave Optics & Huygen's Principle",
+        content: "In Grade 12, we stop treating light just as rays (Ray Optics) and treat it as wavefronts (Wave Optics). Every point on a wavefront acts as a source of secondary wavelets.\n\n**Key Experiment:** Young's Double Slit Experiment (YDSE) which proves light is a transverse wave."
+      },
+      {
+        id: "opt_b3",
+        title: "Dynamic Mirror Analysis",
+        content: "When an object moves toward a **Concave Mirror** from infinity:\n1. Beyond C: Image is real, inverted, between C and F.\n2. At C: Image is real, inverted, same size, at C.\n3. Between C and F: Image is real, inverted, enlarged, beyond C.\n4. At F: Image is at infinity.\n5. Between F and P: Image is **virtual, upright, and enlarged** behind the mirror."
       }
     ]
   },
@@ -284,6 +338,18 @@ export const conceptDatabase: Record<string, ConceptData> = {
         title: "Forgetting Net Force",
         content: "Students often equate $F=ma$ to just one applied force, forgetting to subtract opposing forces like friction. It's $F_{net} = ma$, not just $F_{applied} = ma$!"
       }
+    ],
+    bridge: [
+      {
+        id: "f_b1",
+        title: "Equilibrium in 2D",
+        content: "Grade 9 looks at horizontal/vertical forces. Grade 11 uses trigonometry to resolve forces into components: $F_x = F \\cos \\theta$ and $F_y = F \\sin \\theta$. An object is in equilibrium only if $\\sum F_x = 0$ AND $\\sum F_y = 0$."
+      },
+      {
+        id: "f_b2",
+        title: "Circular Motion Dynamics",
+        content: "When an object moves in a circle, a **Centripetal Force ($F_c$)** must act towards the center: $F_c = \\frac{mv^2}{r}$. This isn't a new 'type' of force; it's a role played by friction (cars turning) or gravity (satellites)."
+      }
     ]
   },
   "gravitation": {
@@ -332,6 +398,18 @@ export const conceptDatabase: Record<string, ConceptData> = {
         id: "g_m1",
         title: "Distance parameter 'r'",
         content: "Students often use the distance between the *surfaces* of the objects. The $r$ in the formula is the distance between their **centers of mass**."
+      }
+    ],
+    bridge: [
+      {
+        id: "g_b1",
+        title: "Kepler's Laws of Planetary Motion",
+        content: "While Class 9 focuses on gravity between two masses, Class 11 introduces Kepler's 3 laws that describe planetary motion: \n\n1. **Law of Orbits:** All planets move in elliptical orbits with the Sun at one focus.\n2. **Law of Areas:** A line segment joining a planet and the Sun sweeps out equal areas during equal intervals of time.\n3. **Law of Periods:** The square of the time period ($T^2$) is proportional to the cube of the semi-major axis ($R^3$)."
+      },
+      {
+        id: "g_b2",
+        title: "Gravitational Potential & Escape Velocity",
+        content: "Gravity is a conservative field. We define **Gravitational Potential ($V$)** as the work done per unit mass. \n\n**Escape Velocity ($v_e$):** The minimum velocity needed for an object to escape the gravitational pull of a planet forever: $v_e = \\sqrt{\\frac{2GM}{R}}$."
       }
     ]
   },

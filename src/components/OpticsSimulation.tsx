@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Eye, Settings2, Sliders, Info, Zap, Sparkles } from 'lucide-react';
+import { Eye, Sliders, Info, Zap, Sparkles, Move } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 type OpticsMode = 'refraction' | 'lens' | 'mirror' | 'wave';
@@ -29,6 +29,8 @@ export function OpticsSimulation() {
   // Mirror state
   const [mirrorFocal, setMirrorFocal] = useState(150);
   const [isConcave, setIsConcave] = useState(true);
+  const [objectDist, setObjectDist] = useState(250); // Measured from mirror center
+  const [objectHeight, setObjectHeight] = useState(60);
 
   // Wave state
   const [slitWidth, setSlitWidth] = useState(20);
@@ -82,10 +84,10 @@ export function OpticsSimulation() {
     return (
       <>
         <rect x="0" y="0" width={width} height={height/2} fill="#fdfcf9" />
-        <text x="20" y="30" fontSize="10" fill="#a05a36" fontWeight="bold" className="uppercase tracking-widest">Medium 1 (n₁ ≈ {n1.toFixed(2)})</text>
+        <text x="30" y="45" fontSize="11" fill="#a05a36" fontWeight="bold" className="uppercase tracking-widest opacity-80">Medium 1 (n₁ ≈ {n1.toFixed(2)})</text>
         
         <rect x="0" y={height/2} width={width} height={height/2} fill="#eff0e8" opacity="0.6" />
-        <text x="20" y={height - 20} fontSize="10" fill="#5a5a40" fontWeight="bold" className="uppercase tracking-widest">Medium 2 (n₂ ≈ {n2.toFixed(2)})</text>
+        <text x="30" y={height - 35} fontSize="11" fill="#5a5a40" fontWeight="bold" className="uppercase tracking-widest opacity-80">Medium 2 (n₂ ≈ {n2.toFixed(2)})</text>
 
         <line x1={cx} y1="0" x2={cx} y2={height} stroke="#d5d2c9" strokeWidth="1" strokeDasharray="6,6" />
         <line x1="0" y1={cy} x2={width} y2={cy} stroke="#8a8a70" strokeWidth="1" />
@@ -180,49 +182,141 @@ export function OpticsSimulation() {
   // Render Mirror Lab
   const renderMirror = () => {
     const mirrorX = 400;
-    const numRays = 5;
-    const raySpacing = 30;
-    const startX = 20;
+    const f = mirrorFocal * (isConcave ? 1 : -1);
+    const u = -objectDist; // Object distance is negative in sign convention
+    
+    // Lens/Mirror Formula: 1/f = 1/v + 1/u => 1/v = 1/f - 1/u
+    // v = (f * u) / (u - f)
+    const v = (f * u) / (u - f);
+    const magnification = -v / u;
+    const imgHeight = objectHeight * magnification;
+    const imgX = mirrorX + v;
+    const isVirtual = v > 0;
+
+    // Draw Optical Axis
+    const axis = (
+      <line x1="0" y1={cy} x2={width} y2={cy} stroke="#d5d2c9" strokeWidth="1" strokeDasharray="5,5" />
+    );
+
+    // Cardinal Points
+    const points = (
+      <g>
+        {/* Focal Point */}
+        <circle cx={mirrorX - f} cy={cy} r="3" fill="#ef4444" />
+        <text x={mirrorX - f} y={cy + 15} fontSize="9" textAnchor="middle" fill="#ef4444" fontWeight="bold">F</text>
+        
+        {/* Center of Curvature (2F) */}
+        {isConcave && (
+          <>
+            <circle cx={mirrorX - 2 * f} cy={cy} r="3" fill="#8b5cf6" />
+            <text x={mirrorX - 2 * f} y={cy + 15} fontSize="9" textAnchor="middle" fill="#8b5cf6" fontWeight="bold">C (2F)</text>
+          </>
+        )}
+      </g>
+    );
+
+    // Object
+    const obj = (
+      <motion.g 
+        drag="x" 
+        dragConstraints={{ left: 50, right: mirrorX - 20 }}
+        dragElastic={0}
+        onDrag={(_, info) => setObjectDist(mirrorX - info.point.x)}
+        className="cursor-move"
+      >
+        <line x1={mirrorX + u} y1={cy} x2={mirrorX + u} y2={cy - objectHeight} stroke="#0ea5e9" strokeWidth="3" markerEnd="url(#arrowhead-obj)" />
+        <rect x={mirrorX + u - 20} y={cy - objectHeight - 25} width="40" height="12" rx="4" fill="white" stroke="#0ea5e9" strokeWidth="1" className="drop-shadow-sm" />
+        <text x={mirrorX + u} y={cy - objectHeight - 16} fontSize="8" textAnchor="middle" fill="#0ea5e9" fontWeight="bold">OBJ: {Math.abs(u).toFixed(0)}</text>
+        <circle cx={mirrorX + u} cy={cy - objectHeight/2} r="10" fill="white" stroke="#0ea5e9" strokeWidth="1" className="opacity-0 hover:opacity-100 transition-opacity" />
+        <path d={`M ${mirrorX+u-4} ${cy-objectHeight/2} L ${mirrorX+u+4} ${cy-objectHeight/2} M ${mirrorX+u} ${cy-objectHeight/2-4} L ${mirrorX+u} ${cy-objectHeight/2+4}`} stroke="#0ea5e9" strokeWidth="1.5" strokeLinecap="round" opacity="0.3" pointerEvents="none" />
+      </motion.g>
+    );
+
+    // Image
+    const img = (
+      <g opacity={0.8}>
+        <line 
+          x1={imgX} y1={cy} 
+          x2={imgX} y2={cy - imgHeight} 
+          stroke={isVirtual ? "#8b5cf6" : "#f97316"} 
+          strokeWidth="3" 
+          strokeDasharray={isVirtual ? "4,2" : "0"}
+          markerEnd={isVirtual ? "url(#arrowhead-virtual)" : "url(#arrowhead-real)"} 
+        />
+        <rect x={imgX - 20} y={cy - imgHeight + (imgHeight > 0 ? -25 : 5)} width="40" height="12" rx="4" fill="white" stroke={isVirtual ? "#8b5cf6" : "#f97316"} strokeWidth="1" className="drop-shadow-sm" />
+        <text x={imgX} y={cy - imgHeight + (imgHeight > 0 ? -16 : 14)} fontSize="8" textAnchor="middle" fill={isVirtual ? "#8b5cf6" : "#f97316"} fontWeight="bold">
+          IMG: {Math.abs(v).toFixed(0)}
+        </text>
+      </g>
+    );
+
+    // Principal Rays
+    const rays = (
+      <g opacity={0.6}>
+        {/* 1. Parallel Ray -> Passes through F (or extension does) */}
+        <line 
+          x1={mirrorX + u} y1={cy - objectHeight} 
+          x2={mirrorX} y2={cy - objectHeight} 
+          stroke={currentColor} strokeWidth="1.5"
+        />
+        <line 
+          x1={mirrorX} y1={cy - objectHeight} 
+          x2={isVirtual ? mirrorX + (mirrorX - (mirrorX - f)) * 2 : 0} 
+          y2={isVirtual ? cy - objectHeight + (cy - (cy - objectHeight)) * 2 : cy + ( (cy - objectHeight) - cy) * ( (0 - mirrorX) / (mirrorX - (mirrorX - f)) )} 
+          stroke={currentColor} strokeWidth="1.5"
+        />
+        {isVirtual && (
+          <line 
+            x1={mirrorX} y1={cy - objectHeight} 
+            x2={imgX} y2={cy - imgHeight} 
+            stroke={currentColor} strokeWidth="1" strokeDasharray="4,2" 
+          />
+        )}
+
+        {/* 2. Ray through Center C -> Reflects back on itself */}
+        <line 
+          x1={mirrorX + u} y1={cy - objectHeight} 
+          x2={mirrorX} y2={cy + ( (cy-objectHeight) - cy) * (mirrorX / (mirrorX + u))} 
+          stroke={currentColor} strokeWidth="1" opacity="0.3"
+        />
+      </g>
+    );
 
     return (
       <>
-        <line x1="0" y1={cy} x2={width} y2={cy} stroke="#d5d2c9" strokeWidth="1" strokeDasharray="5,5" />
+        <defs>
+          <marker id="arrowhead-obj" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#0ea5e9" />
+          </marker>
+          <marker id="arrowhead-real" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="10 0, 0 3.5, 10 7" fill="#f97316" transform={imgHeight > 0 ? "scale(1,1)" : "rotate(180, 5, 3.5)"} />
+          </marker>
+          <marker id="arrowhead-virtual" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="10 0, 0 3.5, 10 7" fill="#8b5cf6" transform={imgHeight > 0 ? "scale(1,1)" : "rotate(180, 5, 3.5)"} />
+          </marker>
+        </defs>
+        {axis}
+        {points}
         
         {/* Mirror Shape */}
         <path 
           d={isConcave 
-            ? `M ${mirrorX} ${cy-100} Q ${mirrorX - 40} ${cy} ${mirrorX} ${cy+100}`
-            : `M ${mirrorX} ${cy-100} Q ${mirrorX + 40} ${cy} ${mirrorX} ${cy+100}`
+            ? `M ${mirrorX} ${cy-140} Q ${mirrorX - 40} ${cy} ${mirrorX} ${cy+140}`
+            : `M ${mirrorX} ${cy-140} Q ${mirrorX + 40} ${cy} ${mirrorX} ${cy+140}`
           }
-          fill="none"
+          fill="rgba(148, 163, 184, 0.1)"
           stroke="#94a3b8"
           strokeWidth="6"
           strokeLinecap="round"
         />
-        <text x={mirrorX - 40} y={cy + 130} fontSize="10" fill="#64748b" fontWeight="bold" className="uppercase tracking-widest">{isConcave ? 'Concave' : 'Convex'} Mirror</text>
+        
+        {rays}
+        {img}
+        {obj}
 
-        {Array.from({ length: numRays }).map((_, i) => {
-          const yOffset = (i - Math.floor(numRays / 2)) * raySpacing;
-          if (yOffset === 0) return null;
-
-          // Paraxial approx: Reflection angle = incidence angle
-          // Concave reflects to focal point f = R/2
-          const f = mirrorFocal * (isConcave ? 1 : -1);
-          const focusX = mirrorX - f;
-
-          return (
-            <g key={`mirror-ray-${i}`}>
-              <line x1={startX} y1={cy + yOffset} x2={mirrorX - (isConcave ? 10 : -10)} y2={cy + yOffset} stroke={currentColor} strokeWidth={2} opacity={0.4} />
-              <line 
-                x1={mirrorX - (isConcave ? 10 : -10)} y1={cy + yOffset} 
-                x2={0} y2={cy + (yOffset * (0 - mirrorX) / (mirrorX - focusX))} 
-                stroke={currentColor} 
-                strokeWidth={2} 
-                opacity={0.8} 
-              />
-            </g>
-          );
-        })}
+        <text x={20} y={height - 20} fontSize="11" fill="#64748b" className="font-mono">
+          u: {u.toFixed(1)} px | v: {v.toFixed(1)} px | m: {magnification.toFixed(2)}
+        </text>
       </>
     );
   };
@@ -292,22 +386,27 @@ export function OpticsSimulation() {
           </div>
           <div>
             <h3 className="text-lg font-bold text-nat-dark font-serif italic leading-tight">Optics Laboratory</h3>
-            <p className="text-[10px] text-nat-muted uppercase tracking-[0.2em] font-bold">Refraction & Lens Aberrations</p>
+            <p className="text-[10px] text-nat-muted uppercase tracking-[0.2em] font-bold">
+              {mode === 'refraction' && "Refraction & Snell's Law"}
+              {mode === 'lens' && "Lens Aberrations & Focus"}
+              {mode === 'mirror' && "Mirror Reflections & Images"}
+              {mode === 'wave' && "Interference & Diffraction"}
+            </p>
           </div>
         </div>
         
-        <div className="flex bg-nat-light p-1 rounded-xl border border-nat-border overflow-x-auto">
+        <div className="flex bg-nat-light p-1 rounded-xl border border-nat-border overflow-x-auto max-w-[150px] sm:max-w-none">
           {[
-            { id: 'refraction', label: "Snell's Law" },
-            { id: 'lens', label: 'Lens Lab' },
+            { id: 'refraction', label: "Refract" },
+            { id: 'lens', label: 'Lens' },
             { id: 'mirror', label: 'Mirrors' },
-            { id: 'wave', label: 'Wave Patterns' }
+            { id: 'wave', label: 'Waves' }
           ].map(opt => (
             <button 
               key={opt.id}
               onClick={() => setMode(opt.id as OpticsMode)}
               className={cn(
-                "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                "px-3 sm:px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                 mode === opt.id ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
               )}
             >
@@ -331,8 +430,8 @@ export function OpticsSimulation() {
           {mode === 'wave' && renderWave()}
         </svg>
         
-        <div className="absolute bottom-6 right-6 flex items-start gap-3 max-w-[250px] bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-nat-border shadow-md">
-           <Zap className={cn("w-4 h-4 mt-0.5", mode === 'wave' ? "text-purple-500" : "text-nat-accent")} />
+        <div className="absolute top-6 right-6 flex items-start gap-3 max-w-[200px] bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-nat-border shadow-lg z-10">
+           <Zap className={cn("w-4 h-4 mt-0.5 shrink-0", mode === 'wave' ? "text-purple-500" : "text-nat-accent")} />
            <p className="text-[11px] text-nat-text leading-relaxed font-medium italic">
              {mode === 'refraction' && "Note how the ray bends toward the normal in denser media. n is wavelength-dependent (Cauchy dispersion)."}
              {mode === 'lens' && "Observe chromatic aberration: different wavelengths focus at slightly different points."}
@@ -346,24 +445,24 @@ export function OpticsSimulation() {
       <div className="bg-nat-panel border-t border-nat-border p-6 md:p-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
           {/* Universal Wavelength Slider */}
-          <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm ring-1 ring-nat-primary/5">
-            <div className="flex justify-between mb-3 text-[11px] font-bold uppercase tracking-widest text-nat-dark">
-              <label>Wavelength</label>
-              <span className="font-mono" style={{ color: currentColor }}>{wavelength}nm</span>
-            </div>
-            <input 
-              type="range" min="380" max="750" step="10" 
-              value={wavelength} onChange={(e) => setWavelength(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-              style={{ background: `linear-gradient(to right, #8b5cf6, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316, #ef4444)` }}
-            />
-          </div>
+          <div className="bg-white p-4 rounded-2x1 border border-nat-border shadow-sm ring-1 ring-nat-primary/5 flex flex-col gap-3">
+             <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+               <label className="opacity-70">Wavelength</label>
+               <span className="font-mono text-xs" style={{ color: currentColor }}>{wavelength}nm</span>
+             </div>
+             <input 
+               type="range" min="380" max="750" step="10" 
+               value={wavelength} onChange={(e) => setWavelength(Number(e.target.value))}
+               className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+               style={{ background: `linear-gradient(to right, #8b5cf6, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316, #ef4444)` }}
+             />
+           </div>
 
           {mode === 'refraction' && (
             <>
-              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
-                <div className="flex justify-between mb-3">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Incidence θ₁</label>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+                  <label className="opacity-70">Incidence θ₁</label>
                   <span className="text-xs font-mono font-bold text-nat-primary">{angle1}°</span>
                 </div>
                 <input 
@@ -372,9 +471,9 @@ export function OpticsSimulation() {
                   className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
                 />
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
-                <div className="flex justify-between mb-3">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Medium 1 (n₀)</label>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+                  <label className="opacity-70">Medium 1 (n₀)</label>
                   <span className="text-xs font-mono font-bold text-nat-primary">{n1Base.toFixed(2)}</span>
                 </div>
                 <input 
@@ -383,9 +482,9 @@ export function OpticsSimulation() {
                   className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
                 />
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
-                <div className="flex justify-between mb-3">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Medium 2 (n₀)</label>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+                  <label className="opacity-70">Medium 2 (n₀)</label>
                   <span className="text-xs font-mono font-bold text-nat-primary">{n2Base.toFixed(2)}</span>
                 </div>
                 <input 
@@ -453,14 +552,36 @@ export function OpticsSimulation() {
                     </button>
                  </div>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm col-span-2">
-                <div className="flex justify-between mb-3">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Mirror Curvature (Focal)</label>
-                  <span className="text-xs font-mono font-bold text-nat-primary">{mirrorFocal}px</span>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3 text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+                  <label>Mirror F</label>
+                  <span className="text-nat-primary font-mono">{mirrorFocal}px</span>
                 </div>
                 <input 
                   type="range" min="50" max="250" step="10" 
                   value={mirrorFocal} onChange={(e) => setMirrorFocal(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3 text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+                  <label>Object Dist</label>
+                  <span className="text-nat-primary font-mono">{objectDist}px</span>
+                </div>
+                <input 
+                  type="range" min="20" max="350" step="5" 
+                  value={objectDist} onChange={(e) => setObjectDist(Number(e.target.value))}
+                  className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
+                />
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm">
+                <div className="flex justify-between mb-3 text-[11px] font-bold uppercase tracking-widest text-nat-dark">
+                  <label>Obj Height</label>
+                  <span className="text-nat-primary font-mono">{objectHeight}px</span>
+                </div>
+                <input 
+                  type="range" min="10" max="100" step="5" 
+                  value={objectHeight} onChange={(e) => setObjectHeight(Number(e.target.value))}
                   className="w-full appearance-none bg-nat-light h-1.5 rounded-full accent-nat-primary cursor-pointer"
                 />
               </div>

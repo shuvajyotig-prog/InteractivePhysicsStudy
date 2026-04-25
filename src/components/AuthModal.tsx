@@ -47,14 +47,14 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-nat-dark/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-nat-dark/40 backdrop-blur-sm z-[100]"
             onClick={onClose}
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-3xl shadow-2xl z-50 overflow-hidden"
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vw,420px)] bg-white rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(30,32,28,0.3)] z-[100] overflow-hidden"
           >
             <div className="p-8">
               <div className="flex justify-between items-center mb-6">

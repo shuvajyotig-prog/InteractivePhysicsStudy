@@ -9,7 +9,7 @@ import { GlobalSearch } from './components/GlobalSearch';
 import { AuthModal } from './components/AuthModal';
 import { OtherSimulations } from './components/OtherSimulations';
 import { AIAssistant } from './components/AIAssistant';
-import { BookOpen, Target, FlaskConical, GraduationCap, ChevronRight, Menu, X, CheckSquare, Search, LogIn, LogOut, User, ActivitySquare, HelpCircle } from 'lucide-react';
+import { BookOpen, Target, FlaskConical, GraduationCap, ChevronRight, Menu, X, CheckSquare, Search, LogIn, LogOut, User, ActivitySquare, HelpCircle, Settings } from 'lucide-react';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from './lib/firebase';
@@ -23,6 +23,7 @@ export default function App() {
   const [selectedTopic, setSelectedTopic] = useState<Topic>(syllabus["11"][0]);
   const [activeTab, setActiveTab] = useState<TabView>("theory");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
@@ -74,23 +75,12 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-nat-bg text-nat-text font-sans overflow-hidden">
-      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectContent={handleSearchSelect} />
-      <AuthModal 
-        isOpen={authOpen} 
-        onClose={() => setAuthOpen(false)} 
-        onSuccess={() => {
-          setAuthOpen(false);
-          setActiveTab('cockpit');
-          setSidebarOpen(false);
-        }}
-      />
-
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-nat-dark/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-nat-dark/50 z-[60] lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -98,75 +88,65 @@ export default function App() {
 
       {/* Sidebar - Persistent on tablets and desktop (md+) */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 bg-nat-light border-r border-nat-border transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:flex md:flex-col shrink-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed inset-y-0 left-0 z-50 bg-nat-light border-r border-nat-border overflow-hidden transition-all duration-500 ease-in-out md:translate-x-0 md:static md:flex md:flex-col shrink-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        sidebarCollapsed ? "w-20" : "w-72"
       )}>
-        <div className="h-16 flex items-center justify-between px-6 border-b border-nat-border shrink-0 bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-nat-primary rounded-xl flex items-center justify-center text-white font-bold font-serif italic text-xl shadow-lg border border-nat-primary/20">Φ</div>
-            <div className="flex flex-col">
-              <div className="font-bold text-nat-dark leading-none text-sm tracking-tight">PhyQuest Pro</div>
-              <div className="text-[10px] text-nat-muted uppercase tracking-[0.2em] mt-1 font-bold">Physics Labs</div>
-            </div>
-          </div>
-          <button className="md:hidden text-nat-muted hover:text-nat-dark p-1 rounded-full hover:bg-nat-panel" onClick={() => setSidebarOpen(false)}>
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="p-4 border-b border-nat-border shrink-0 bg-nat-panel-alt/30">
-          {user ? (
-            <div className="flex items-center justify-between w-full bg-white p-2 rounded-xl border border-nat-border shadow-sm">
-              <div className="flex items-center gap-2 overflow-hidden px-1">
-                <div className="w-8 h-8 bg-nat-accent rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="truncate">
-                  <div className="text-[11px] font-bold text-nat-dark leading-tight line-clamp-1">{user.email}</div>
-                  <div className="text-[9px] text-nat-muted uppercase tracking-widest font-bold">Elite Student</div>
-                </div>
+        <div className={cn(
+          "h-16 flex items-center px-4 border-b border-nat-border shrink-0 bg-white transition-all",
+          sidebarCollapsed ? "justify-center gap-1" : "justify-between"
+        )}>
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-9 h-9 bg-nat-primary rounded-xl flex items-center justify-center text-white font-bold font-serif italic text-xl shadow-lg border border-nat-primary/20 shrink-0">Φ</div>
+            {!sidebarCollapsed && (
+              <div className="flex flex-col animate-in fade-in slide-in-from-left-2 duration-300">
+                <div className="font-bold text-nat-dark leading-none text-sm tracking-tight whitespace-nowrap">PhyQuest Pro</div>
+                <div className="text-[10px] text-nat-muted uppercase tracking-[0.2em] mt-1 font-bold whitespace-nowrap">Physics Labs</div>
               </div>
-              <button onClick={handleLogout} className="p-2 text-nat-muted hover:text-nat-primary rounded-lg hover:bg-nat-light shrink-0 transition-all" title="Logout">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="w-full">
-              <button
-                onClick={() => setAuthOpen(true)}
-                className="w-full bg-nat-dark text-white rounded-xl py-2.5 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md active:scale-95"
-              >
-                <LogIn className="w-4 h-4" /> Sign In
-              </button>
-              <p className="text-[10px] text-nat-muted mt-2 text-center leading-tight opacity-70">
-                Sign in to unlock personalized insights and persistent labs.
-              </p>
-            </div>
+            )}
+          </div>
+          
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-1.5 rounded-lg hover:bg-nat-panel text-nat-muted hover:text-nat-primary transition-all md:flex hidden items-center justify-center shrink-0"
+            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            <ChevronRight className={cn("w-4 h-4 transition-transform duration-500", sidebarCollapsed ? "" : "rotate-180")} />
+          </button>
+
+          {!sidebarCollapsed && (
+            <button className="md:hidden text-nat-muted hover:text-nat-dark p-1 rounded-full hover:bg-nat-panel" onClick={() => setSidebarOpen(false)}>
+              <X className="h-5 w-5" />
+            </button>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 py-8 flex flex-col gap-8 custom-scrollbar no-scrollbar">
           {user && (
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 px-2 mb-1">
-                <div className="h-[1px] flex-1 bg-nat-border"></div>
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-nat-muted whitespace-nowrap">Intelligence</h2>
-                <div className="h-[1px] flex-1 bg-nat-border"></div>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-2 px-2 mb-1 animate-in fade-in duration-300">
+                  <div className="h-[1px] flex-1 bg-nat-border"></div>
+                  <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-nat-muted whitespace-nowrap">Intelligence</h2>
+                  <div className="h-[1px] flex-1 bg-nat-border"></div>
+                </div>
+              )}
               <button
                 onClick={() => { setActiveTab('cockpit'); setSidebarOpen(false); }}
+                title={sidebarCollapsed ? "Student Cockpit" : undefined}
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl text-sm transition-all border group",
                   activeTab === 'cockpit'
                      ? "bg-nat-primary text-white border-nat-primary shadow-md" 
-                     : "bg-white border-nat-border text-nat-text hover:border-nat-primary/50 hover:bg-nat-panel"
+                     : "bg-white border-nat-border text-nat-text hover:border-nat-primary/50 hover:bg-nat-panel",
+                  sidebarCollapsed && "justify-center px-0"
                 )}
               >
-                  <span className="font-bold truncate text-left flex items-center gap-2">
+                  <span className={cn("font-bold truncate text-left flex items-center gap-2", sidebarCollapsed && "justify-center")}>
                      <Target className={cn("w-4 h-4", activeTab === 'cockpit' ? "text-white" : "text-nat-primary")} /> 
-                     Student Cockpit
+                     {!sidebarCollapsed && <span className="animate-in fade-in duration-300">Student Cockpit</span>}
                   </span>
-                  {activeTab === 'cockpit' && (
+                  {!sidebarCollapsed && activeTab === 'cockpit' && (
                      <ActivitySquare className="w-3 h-3 text-white animate-pulse" />
                   )}
               </button>
@@ -175,32 +155,45 @@ export default function App() {
 
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 px-2 mb-1">
-                <div className="h-[1px] flex-1 bg-nat-border"></div>
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-nat-muted whitespace-nowrap">Curriculum</h2>
-                <div className="h-[1px] flex-1 bg-nat-border"></div>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-2 px-2 mb-1 animate-in fade-in duration-300">
+                  <div className="h-[1px] flex-1 bg-nat-border"></div>
+                  <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-nat-muted whitespace-nowrap">Curriculum</h2>
+                  <div className="h-[1px] flex-1 bg-nat-border"></div>
+                </div>
+              )}
               <nav className="flex flex-col gap-1">
                 {(Object.keys(syllabus) as ClassLevel[]).flatMap(grade => syllabus[grade]).map((topic) => (
                   <button
                     key={topic.id}
                     onClick={() => handleTopicChange(topic)}
+                    title={sidebarCollapsed ? topic.title : undefined}
                     className={cn(
                       "w-full flex items-center justify-between p-3 rounded-xl text-[13px] transition-all border group",
                       selectedTopic.id === topic.id && activeTab !== 'cockpit'
                         ? "bg-nat-dark text-white border-nat-dark shadow-sm"
-                        : "bg-white/50 border-transparent text-nat-text hover:bg-white hover:border-nat-border hover:shadow-sm"
+                        : "bg-white/50 border-transparent text-nat-text hover:bg-white hover:border-nat-border hover:shadow-sm",
+                      sidebarCollapsed && "justify-center px-0"
                     )}
                   >
-                    <span className={cn(
-                      "font-medium truncate max-w-[160px] text-left",
-                      selectedTopic.id === topic.id && activeTab !== 'cockpit' ? "font-bold" : ""
-                    )}>{topic.title}</span>
-                    
-                    {selectedTopic.id === topic.id && activeTab !== 'cockpit' ? (
-                      <div className="w-1.5 h-1.5 bg-nat-accent rounded-full shadow-[0_0_8px_rgba(230,186,138,0.8)]"></div>
+                    {!sidebarCollapsed ? (
+                      <>
+                        <span className={cn(
+                          "font-medium truncate max-w-[160px] text-left animate-in fade-in duration-300",
+                          selectedTopic.id === topic.id && activeTab !== 'cockpit' ? "font-bold" : ""
+                        )}>{topic.title}</span>
+                        
+                        {selectedTopic.id === topic.id && activeTab !== 'cockpit' ? (
+                          <div className="w-1.5 h-1.5 bg-nat-accent rounded-full shadow-[0_0_8px_rgba(230,186,138,0.8)]"></div>
+                        ) : (
+                          topic.hasSimulation && <FlaskConical className="w-3 h-3 text-nat-muted group-hover:text-nat-primary transition-colors opacity-40" />
+                        )}
+                      </>
                     ) : (
-                      topic.hasSimulation && <FlaskConical className="w-3 h-3 text-nat-muted group-hover:text-nat-primary transition-colors opacity-40" />
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        selectedTopic.id === topic.id && activeTab !== 'cockpit' ? "bg-nat-accent" : "bg-nat-muted/30"
+                      )} />
                     )}
                   </button>
                 ))}
@@ -208,6 +201,8 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* Header content */}
       </div>
 
       {/* Main Content */}
@@ -231,21 +226,45 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 lg:gap-4 shrink-0">
             <button 
               onClick={() => setSearchOpen(true)}
-              className="p-2 mr-2 text-nat-muted hover:text-nat-dark hover:bg-white rounded-full transition-colors hidden sm:flex items-center gap-2 bg-white shadow-sm border border-nat-border px-4 py-1.5 w-64 md:w-80"
+              className="p-2 mr-2 text-nat-muted hover:text-nat-dark hover:bg-white rounded-full transition-colors hidden sm:flex items-center gap-2 bg-white shadow-sm border border-nat-border px-4 py-1.5 w-48 lg:w-80"
             >
               <Search className="w-4 h-4 text-nat-primary" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-nat-muted text-left flex-1 truncate">Search any concept...</span>
-              <span className="text-[10px] font-bold tracking-widest bg-nat-light px-2 py-0.5 rounded border border-nat-border hidden md:block">⌘K</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-nat-muted text-left flex-1 truncate">Search concept...</span>
             </button>
             <button 
               onClick={() => setSearchOpen(true)}
-              className="p-2 mr-2 text-nat-primary hover:text-nat-dark bg-white shadow-sm border border-nat-border rounded-full transition-colors sm:hidden"
+              className="p-2 text-nat-primary hover:text-nat-dark bg-white shadow-sm border border-nat-border rounded-full transition-colors sm:hidden"
             >
               <Search className="w-5 h-5" />
             </button>
+
+            {user ? (
+              <div className="flex items-center gap-2 pl-4 border-l border-nat-border h-10">
+                <div className="flex flex-col items-end justify-center">
+                  <span className="text-[10px] font-medium text-nat-muted truncate max-w-[150px] leading-tight mb-0.5">{user.email}</span>
+                  <button 
+                    onClick={handleLogout}
+                    className="text-[9px] font-black uppercase tracking-[0.2em] text-nat-primary hover:text-nat-dark transition-colors flex items-center gap-1 group/out"
+                  >
+                    Logout
+                    <LogOut className="w-2.5 h-2.5 transition-transform group-hover/out:translate-x-0.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center pl-4 border-l border-nat-border h-8">
+                <button
+                  onClick={() => setAuthOpen(true)}
+                  className="bg-nat-dark text-white rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-sm flex items-center gap-2"
+                >
+                  <LogIn className="w-3.5 h-3.5" /> 
+                  <span>Sign In</span>
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -258,7 +277,7 @@ export default function App() {
                   { id: 'theory', icon: BookOpen, label: 'Theory' },
                   { id: 'lab', icon: FlaskConical, label: 'Lab', show: selectedTopic.hasSimulation },
                   { id: 'test', icon: CheckSquare, label: 'Practice' },
-                  { id: 'ai', icon: HelpCircle, label: 'Ask AI' }
+                  { id: 'ai', icon: HelpCircle, label: 'Ask Tutor' }
                 ].filter(t => t.show !== false).map(tab => (
                   <button
                     key={tab.id}
@@ -281,7 +300,11 @@ export default function App() {
           <div className="w-full max-w-[1024px] p-4 md:p-8 space-y-8 flex-1">
             
             {activeTab === 'theory' && (
-              <ConceptBuilder grade={selectedClass} topic={selectedTopic} />
+              <ConceptBuilder 
+                grade={selectedClass} 
+                topic={selectedTopic} 
+                onSwitchTab={(tab) => setActiveTab(tab as TabView)} 
+              />
             )}
 
             {activeTab === 'lab' && selectedTopic.hasSimulation && (
@@ -312,6 +335,17 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectContent={handleSearchSelect} />
+      <AuthModal 
+        isOpen={authOpen} 
+        onClose={() => setAuthOpen(false)} 
+        onSuccess={() => {
+          setAuthOpen(false);
+          setActiveTab('cockpit');
+          setSidebarOpen(false);
+        }}
+      />
     </div>
   );
 }

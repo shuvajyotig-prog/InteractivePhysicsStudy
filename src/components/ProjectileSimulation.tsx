@@ -121,9 +121,9 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
       {activeTab === 'projectile' && (
         <>
           <div className="relative flex-1 min-h-[350px] flex items-end justify-start bg-white p-6">
-             <div className="absolute top-6 left-6 z-10 pointer-events-none">
-               <h3 className="text-2xl font-serif italic text-nat-dark leading-tight">Interactive Lab: Projectile</h3>
-               <p className="text-sm text-nat-muted max-w-[200px]">Simulate a launch. Note that range is maximized at an angle of 45°.</p>
+             <div className="absolute top-8 left-8 z-10 pointer-events-none">
+               <h3 className="text-xl font-serif italic text-nat-dark leading-tight">Interactive Lab: Projectile</h3>
+               <p className="text-xs text-nat-muted max-w-[180px] mt-1">Simulate a launch. Note that range is maximized at an angle of 45°.</p>
              </div>
 
              <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMax meet" className="absolute bottom-0 left-0 w-full h-full">
@@ -171,13 +171,13 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
 
           <div className="bg-nat-panel border-t border-nat-border flex flex-col items-center p-6 md:px-10 gap-8 shrink-0">
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-primary/30 transition-colors">
-                <div className="flex justify-between items-center mb-3">
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-primary/30 transition-colors flex flex-col gap-3">
+                <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-nat-primary/10 rounded-lg text-nat-primary">
                       <Gauge className="w-4 h-4" />
                     </div>
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Initial Velocity (u)</label>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark opacity-70">Initial Velocity (u)</label>
                   </div>
                   <span className="text-xs font-mono font-bold text-nat-primary bg-nat-light px-2 py-1 rounded border border-nat-border">{velocity} m/s</span>
                 </div>
@@ -195,13 +195,13 @@ export function ProjectileSimulation({ initialVelocity = 20, initialAngle = 45 }
                 </div>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-secondary/30 transition-colors">
-                <div className="flex justify-between items-center mb-3">
+              <div className="bg-white p-4 rounded-2xl border border-nat-border shadow-sm group hover:border-nat-secondary/30 transition-colors flex flex-col gap-3">
+                <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-nat-secondary/10 rounded-lg text-nat-secondary">
                       <Compass className="w-4 h-4" />
                     </div>
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark">Launch Angle (θ)</label>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-nat-dark opacity-70">Launch Angle (θ)</label>
                   </div>
                   <span className="text-xs font-mono font-bold text-nat-secondary bg-nat-light px-2 py-1 rounded border border-nat-border">{angle}°</span>
                 </div>
