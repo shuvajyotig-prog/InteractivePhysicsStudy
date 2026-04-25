@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClassLevel, syllabus, Topic } from './data/syllabus';
 import { ProjectileSimulation } from './components/ProjectileSimulation';
 import { CircuitSimulation } from './components/CircuitSimulation';
 import { OpticsSimulation } from './components/OpticsSimulation';
 import { PressureTest } from './components/PressureTest';
 import { ConceptBuilder } from './components/ConceptBuilder';
-import { BookOpen, Target, FlaskConical, GraduationCap, ChevronRight, Menu, X, CheckSquare } from 'lucide-react';
+import { GlobalSearch } from './components/GlobalSearch';
+import { AuthModal } from './components/AuthModal';
+import { OtherSimulations } from './components/OtherSimulations';
+import { BookOpen, Target, FlaskConical, GraduationCap, ChevronRight, Menu, X, CheckSquare, Search, LogIn, LogOut, User } from 'lucide-react';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 type TabView = 'concept' | 'simulation' | 'practice';
 
@@ -16,6 +21,20 @@ export default function App() {
   const [selectedTopic, setSelectedTopic] = useState<Topic>(syllabus["11"][0]);
   const [activeTab, setActiveTab] = useState<TabView>("concept");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [user, setUser] = useState(auth.currentUser);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   // When class changes, reset topic to the first of that class
   const handleClassChange = (grade: ClassLevel) => {
@@ -30,8 +49,24 @@ export default function App() {
     setSidebarOpen(false);
   };
 
+  const handleSearchSelect = (subjectId: string, topicId: string) => {
+    // Find the class level the topic belongs to
+    for (const [grade, topics] of Object.entries(syllabus)) {
+      const topic = topics.find(t => t.id === topicId);
+      if (topic) {
+        setSelectedClass(grade as ClassLevel);
+        setSelectedTopic(topic);
+        setActiveTab('concept');
+        break;
+      }
+    }
+  };
+
   return (
     <div className="flex h-screen bg-nat-bg text-nat-text font-sans overflow-hidden">
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectContent={handleSearchSelect} />
+      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
+
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -58,7 +93,33 @@ export default function App() {
           </button>
         </div>
 
-        <div className="p-6 border-b border-nat-border">
+        <div className="p-4 border-b border-nat-border shrink-0 flex items-center justify-between">
+          {user ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-8 h-8 bg-[#c27a56] rounded-full flex items-center justify-center text-white shrink-0">
+                  <User className="w-4 h-4" />
+                </div>
+                <div className="truncate">
+                  <div className="text-xs font-bold text-nat-dark leading-tight line-clamp-1">{user.email}</div>
+                  <div className="text-[10px] text-nat-muted uppercase tracking-widest font-semibold">Student</div>
+                </div>
+              </div>
+              <button onClick={handleLogout} className="p-2 text-nat-muted hover:text-nat-dark rounded-full hover:bg-nat-panel shrink-0 transition-colors" title="Logout">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className="w-full bg-nat-dark text-white rounded-lg py-2 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest hover:bg-black transition-colors"
+            >
+              <LogIn className="w-4 h-4" /> Sign In
+            </button>
+          )}
+        </div>
+
+        <div className="p-6 border-b border-nat-border shrink-0">
           <div className="text-xs font-bold text-nat-muted uppercase tracking-widest mb-3">Select Class</div>
           <div className="grid grid-cols-2 gap-2">
             {(["9", "10", "11", "12"] as ClassLevel[]).map((grade) => (
@@ -107,47 +168,63 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-nat-border flex items-center justify-between px-4 lg:px-8 shrink-0 shadow-sm z-10">
-          <div className="flex items-center gap-4">
-            <button className="lg:hidden text-nat-muted hover:text-nat-dark" onClick={() => setSidebarOpen(true)}>
+        <header className="h-16 bg-white border-b border-nat-border flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <button className="lg:hidden text-nat-muted hover:text-nat-dark shrink-0" onClick={() => setSidebarOpen(true)}>
               <Menu className="h-6 w-6" />
             </button>
-            <div>
-               <h1 className="text-lg font-bold text-nat-dark leading-tight">{selectedTopic.title}</h1>
-               <p className="text-[10px] uppercase tracking-wider text-nat-muted font-semibold hidden md:block">CBSE Class {selectedClass}</p>
+            <div className="min-w-0">
+               <h1 className="text-lg font-bold text-nat-dark leading-tight truncate">{selectedTopic.title}</h1>
+               <p className="text-[10px] uppercase tracking-wider text-nat-muted font-semibold hidden md:block truncate">CBSE Class {selectedClass}</p>
             </div>
           </div>
           
-          <div className="flex bg-nat-panel rounded-lg border border-nat-border p-1">
-            <button
-              onClick={() => setActiveTab('concept')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all uppercase tracking-widest",
-                activeTab === 'concept' ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
-              )}
+          <div className="flex items-center gap-2 shrink-0">
+            <button 
+              onClick={() => setSearchOpen(true)}
+              className="p-2 mr-2 text-nat-muted hover:text-nat-dark hover:bg-nat-light rounded-full transition-colors hidden sm:flex items-center gap-2 bg-nat-panel border border-nat-border px-4 py-1.5"
             >
-              <BookOpen className="w-3.5 h-3.5" /> Concept
+              <Search className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-widest">Search...</span>
             </button>
-            {selectedTopic.hasSimulation && (
+            <button 
+              onClick={() => setSearchOpen(true)}
+              className="p-2 mr-2 text-nat-muted hover:text-nat-dark hover:bg-nat-light rounded-full transition-colors sm:hidden"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
+            <div className="flex bg-nat-panel rounded-lg border border-nat-border p-1">
               <button
-                onClick={() => setActiveTab('simulation')}
+                onClick={() => setActiveTab('concept')}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all uppercase tracking-widest",
-                  activeTab === 'simulation' ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
+                  "flex items-center gap-2 px-3 lg:px-4 py-1.5 rounded-md text-xs font-bold transition-all uppercase tracking-widest",
+                  activeTab === 'concept' ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
                 )}
               >
-                <FlaskConical className="w-3.5 h-3.5" /> Lab
+                <BookOpen className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Concept</span>
               </button>
-            )}
-            <button
-              onClick={() => setActiveTab('practice')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all uppercase tracking-widest",
-                activeTab === 'practice' ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
+              {selectedTopic.hasSimulation && (
+                <button
+                  onClick={() => setActiveTab('simulation')}
+                  className={cn(
+                    "flex items-center gap-2 px-3 lg:px-4 py-1.5 rounded-md text-xs font-bold transition-all uppercase tracking-widest",
+                    activeTab === 'simulation' ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
+                  )}
+                >
+                  <FlaskConical className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Lab</span>
+                </button>
               )}
-            >
-              <CheckSquare className="w-3.5 h-3.5" /> Test
-            </button>
+              <button
+                onClick={() => setActiveTab('practice')}
+                className={cn(
+                  "flex items-center gap-2 px-3 lg:px-4 py-1.5 rounded-md text-xs font-bold transition-all uppercase tracking-widest",
+                  activeTab === 'practice' ? "bg-white text-nat-dark shadow-sm" : "text-nat-muted hover:text-nat-dark"
+                )}
+              >
+                <CheckSquare className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Test</span>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -168,11 +245,7 @@ export default function App() {
                 ) : selectedTopic.id === 'light' || selectedTopic.id === 'optics' ? (
                   <OpticsSimulation />
                 ) : (
-                  <div className="bg-nat-panel border border-nat-border text-nat-text p-8 rounded-3xl text-center">
-                    <FlaskConical className="w-12 h-12 mx-auto text-nat-muted mb-4" />
-                    <h3 className="text-lg font-bold mb-2">Interactive Lab Locked</h3>
-                    <p className="text-sm">We are currently building the simulation for {selectedTopic.title}.</p>
-                  </div>
+                  <OtherSimulations topicId={selectedTopic.id} />
                 )}
               </motion.div>
             )}

@@ -206,6 +206,9 @@ export function PressureTest({ grade, topic }: PressureTestProps) {
                   {selectedOption === currentQuestion.correctOptionIndex ? "Excellent Work!" : "Not quite right!"}
                 </h4>
                 <p className="text-nat-text leading-relaxed text-sm">
+                  <span className="font-bold block mb-2">
+                    Correct Option: {currentQuestion.options[currentQuestion.correctOptionIndex]}
+                  </span>
                   {currentQuestion.explanation}
                 </p>
               </motion.div>
