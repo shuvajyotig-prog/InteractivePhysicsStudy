@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PlaySquare, Activity, Compass, Zap, Eye, Magnet, Repeat } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -324,71 +324,197 @@ function MagnetismSimulation() {
 }
 
 function ElectrostaticsSimulation() {
-  const [q1, setQ1] = useState(-5);
-  const [q2, setQ2] = useState(5);
-  const [distance, setDistance] = useState(4);
-  
-  const forceRaw = (q1 * q2) / Math.pow(distance, 2);
-  const forceMag = Math.abs(forceRaw).toFixed(2);
-  const isAttractive = forceRaw < 0;
+  const [shape, setShape] = useState<'line' | 'triangle' | 'square' | 'hexagon' | 'triangle-center' | 'square-center' | 'hexagon-center'>('triangle');
+  const [charges, setCharges] = useState<number[]>([5, -5, 5]); // Initial for triangle
+
+  // Reset charges when shape changes
+  useEffect(() => {
+    let numCharges = 2;
+    if (shape === 'triangle') numCharges = 3;
+    if (shape === 'square') numCharges = 4;
+    if (shape === 'hexagon') numCharges = 6;
+    if (shape === 'triangle-center') numCharges = 4;
+    if (shape === 'square-center') numCharges = 5;
+    if (shape === 'hexagon-center') numCharges = 7;
+    setCharges(Array(numCharges).fill(0).map((_, i) => {
+        // if it's the center charge, default it to positive for visibility
+        if (i === numCharges - 1 && shape.includes('-center')) {
+            return 8;
+        }
+        return i % 2 === 0 ? 5 : -5;
+    }));
+  }, [shape]);
+
+  const updateCharge = (index: number, val: number) => {
+    const newCharges = [...charges];
+    newCharges[index] = val;
+    setCharges(newCharges);
+  };
+
+  const getPoints = () => {
+    const R = 100;
+    if (shape === 'line') return [[-100, 0], [100, 0]];
+    
+    const triPoints = [[0, -R], [R * Math.cos(Math.PI/6), R * Math.sin(Math.PI/6)], [-R * Math.cos(Math.PI/6), R * Math.sin(Math.PI/6)]];
+    if (shape === 'triangle') return triPoints;
+    if (shape === 'triangle-center') return [...triPoints, [0, 0]];
+    
+    const sqPoints = [[-R, -R], [R, -R], [R, R], [-R, R]];
+    if (shape === 'square') return sqPoints;
+    if (shape === 'square-center') return [...sqPoints, [0, 0]];
+    
+    const hexPoints = Array.from({length: 6}).map((_, i) => {
+      const angle = (Math.PI / 3) * i - Math.PI / 2;
+      return [R * Math.cos(angle), R * Math.sin(angle)];
+    });
+    if (shape === 'hexagon') return hexPoints;
+    if (shape === 'hexagon-center') return [...hexPoints, [0, 0]];
+
+    return [];
+  };
+
+  const points = getPoints();
+
+  // Calculate forces
+  const K = 50000; // Visual scaling constant
+  const forces = points.map((p1, i) => {
+    let fx = 0, fy = 0;
+    points.forEach((p2, j) => {
+      if (i === j) return;
+      const dx = p1[0] - p2[0];
+      const dy = p1[1] - p2[1];
+      const distSq = dx * dx + dy * dy;
+      const dist = Math.sqrt(distSq);
+      if (dist === 0) return;
+      
+      const forceMag = (K * charges[i] * charges[j]) / (distSq * dist); // multiplied by dx/dist or dy/dist, so we divide by dist^3
+      fx += forceMag * dx;
+      fy += forceMag * dy;
+    });
+    return { fx, fy };
+  });
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <h3 className="text-xl font-bold font-serif italic mb-4">Coulomb's Law</h3>
-      
-      <div className="bg-nat-light h-48 rounded-xl relative overflow-hidden mb-6 flex items-center justify-center gap-4 border border-nat-border border-dashed">
-         <motion.div 
-           className={cn(
-             "w-16 h-16 rounded-full flex items-center justify-center font-bold text-white shadow-lg transition-transform",
-             q1 < 0 ? "bg-red-500" : q1 > 0 ? "bg-blue-500" : "bg-gray-400"
-           )}
-           animate={{ x: isAttractive && q1 !== 0 && q2 !== 0 ? 10 : q1 !== 0 && q2 !== 0 ? -10 : 0 }}
-         >
-           {q1 > 0 ? `+${q1}` : q1}
-         </motion.div>
-         
-         <div className="flex-1 max-w-[200px] flex flex-col items-center">
-            {q1 !== 0 && q2 !== 0 && (
-              <div className="text-xs uppercase tracking-widest font-bold text-nat-muted mb-2">
-                {isAttractive ? "Attraction" : "Repulsion"}
-              </div>
-            )}
-            <div className="w-full flex items-center gap-2">
-              <div className="h-0.5 bg-nat-border flex-1" />
-              <div className="text-xs font-mono">{distance}m</div>
-              <div className="h-0.5 bg-nat-border flex-1" />
-            </div>
-         </div>
-
-         <motion.div 
-           className={cn(
-             "w-16 h-16 rounded-full flex items-center justify-center font-bold text-white shadow-lg transition-transform",
-             q2 < 0 ? "bg-red-500" : q2 > 0 ? "bg-blue-500" : "bg-gray-400"
-           )}
-           animate={{ x: isAttractive && q1 !== 0 && q2 !== 0 ? -10 : q1 !== 0 && q2 !== 0 ? 10 : 0 }}
-         >
-           {q2 > 0 ? `+${q2}` : q2}
-         </motion.div>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold font-serif italic mb-0">Vector Electrostatics</h3>
+        <select 
+          value={shape}
+          onChange={(e) => setShape(e.target.value as any)}
+          className="bg-nat-light border border-nat-border rounded-xl px-3 py-1.5 font-bold text-sm"
+        >
+          <option value="line">Line (2 Charges)</option>
+          <option value="triangle">Triangle (3 Charges)</option>
+          <option value="triangle-center">Triangle + Center</option>
+          <option value="square">Square (4 Charges)</option>
+          <option value="square-center">Square + Center</option>
+          <option value="hexagon">Hexagon (6 Charges)</option>
+          <option value="hexagon-center">Hexagon + Center</option>
+        </select>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <label className="block text-xs font-bold uppercase mb-2">Charge 1 ({q1} C)</label>
-          <input type="range" min="-10" max="10" value={q1} onChange={e => setQ1(Number(e.target.value))} className="w-full accent-nat-primary" />
+        <div className="md:col-span-2 bg-nat-light rounded-xl border border-nat-border border-dashed relative flex items-center justify-center p-4 min-h-[400px]">
+          <svg viewBox="-200 -200 400 400" className="w-full h-full max-h-[350px]">
+            {/* Draw connections */}
+            {points.map((p, i) => {
+              const rPerimeter = shape.includes('-center') ? points.length - 1 : points.length;
+              if (i >= rPerimeter) return null;
+              
+              const nextP = points[(i + 1) % rPerimeter];
+              if (shape === 'line' && i === 1) return null; // Don't close the line
+              
+              return (
+                <line key={`l-${i}`} x1={p[0]} y1={p[1]} x2={nextP[0]} y2={nextP[1]} stroke="#cbd5e1" strokeWidth="2" strokeDasharray="5,5" />
+              );
+            })}
+            {shape.includes('square') && (
+              <>
+                <line x1={points[0][0]} y1={points[0][1]} x2={points[2][0]} y2={points[2][1]} stroke="#cbd5e1" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1={points[1][0]} y1={points[1][1]} x2={points[3][0]} y2={points[3][1]} stroke="#cbd5e1" strokeWidth="2" strokeDasharray="5,5" />
+              </>
+            )}
+
+            {/* Draw forces */}
+            {forces.map((f, i) => {
+              if (charges[i] === 0 || (f.fx === 0 && f.fy === 0)) return null;
+              const p = points[i];
+              // Cap visual length of force vector
+              const fMag = Math.sqrt(f.fx*f.fx + f.fy*f.fy);
+              const maxL = 100;
+              const scale = fMag > maxL ? maxL / fMag : 1;
+              const vx = f.fx * scale;
+              const vy = f.fy * scale;
+              
+              return (
+                <g key={`f-${i}`}>
+                   <defs>
+                     <marker id={`arrowhead-${i}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                       <polygon points="0 0, 6 3, 0 6" fill="#10b981" />
+                     </marker>
+                   </defs>
+                   <line 
+                     x1={p[0]} y1={p[1]} 
+                     x2={p[0] + vx} y2={p[1] + vy} 
+                     stroke="#10b981" 
+                     strokeWidth="3"
+                     markerEnd={`url(#arrowhead-${i})`}
+                   />
+                </g>
+              );
+            })}
+
+            {/* Draw charges */}
+            {points.map((p, i) => {
+              const q = charges[i];
+              const color = q < 0 ? '#ef4444' : q > 0 ? '#3b82f6' : '#94a3b8';
+              const isCenter = shape.includes('-center') && i === points.length - 1;
+              return (
+                <g key={`q-${i}`} transform={`translate(${p[0]}, ${p[1]})`}>
+                  <circle cx="0" cy="0" r="16" fill={color} className="shadow-lg drop-shadow-md" />
+                  <text x="0" y="5" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">
+                    {q > 0 ? `+${q}` : q}
+                  </text>
+                  <text x="0" y="-22" textAnchor="middle" fill="#64748b" fontSize="12" fontWeight="bold">
+                    {isCenter ? 'qCenter' : `q${i+1}`}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
         </div>
-        <div>
-          <label className="block text-xs font-bold uppercase mb-2">Charge 2 ({q2} C)</label>
-          <input type="range" min="-10" max="10" value={q2} onChange={e => setQ2(Number(e.target.value))} className="w-full accent-nat-primary" />
+
+        <div className="bg-nat-panel rounded-xl border border-nat-border p-4 max-h-[400px] overflow-y-auto">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-nat-muted mb-4">Set Charges (μC)</h4>
+          <div className="space-y-4">
+            {charges.map((q, i) => {
+              const isCenter = shape.includes('-center') && i === charges.length - 1;
+              return (
+              <div key={i}>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-bold text-nat-dark">{isCenter ? 'Center (qC)' : `q${i + 1}`}</label>
+                  <span className={cn("text-xs font-mono font-bold", q < 0 ? "text-red-600" : q > 0 ? "text-blue-600" : "text-gray-500")}>
+                    {q > 0 ? '+' : ''}{q}
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="-10" max="10" 
+                  value={q} 
+                  onChange={e => updateCharge(i, Number(e.target.value))} 
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-nat-primary" 
+                />
+              </div>
+            )})}
+          </div>
+          
+          <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2">
+            <Zap className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-green-800 leading-relaxed font-medium">
+              The green arrows show the <strong>net force vector</strong> acting on each point charge, calculated by superimposing Coulomb forces from all other charges.
+            </p>
+          </div>
         </div>
-         <div>
-          <label className="block text-xs font-bold uppercase mb-2">Distance ({distance} m)</label>
-          <input type="range" min="1" max="10" value={distance} onChange={e => setDistance(Number(e.target.value))} className="w-full accent-nat-primary" />
-        </div>
-      </div>
-      
-      <div className="mt-6 flex gap-4 bg-nat-panel p-4 rounded-xl border border-nat-border items-center">
-        <Zap className={cn("w-5 h-5", isAttractive ? "text-purple-500" : "text-yellow-500")} />
-        <div className="font-mono text-sm">Electric Force Mag: <span className="font-bold ml-1">{forceMag} F</span></div>
       </div>
     </div>
   );
