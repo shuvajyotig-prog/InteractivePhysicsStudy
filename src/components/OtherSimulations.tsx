@@ -56,7 +56,10 @@ function DynamicsSimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <h3 className="text-xl font-bold font-serif italic mb-4">Newton's Second Law</h3>
+      <h3 className="text-xl font-bold font-serif italic mb-1">Newton's Second Law</h3>
+      <p className="text-sm text-nat-muted mb-4 max-w-2xl">
+        Observe how net force and mass affect acceleration (a = F/m). The block only accelerates when the push force exceeds friction.
+      </p>
       <div className="bg-nat-light h-48 rounded-xl relative overflow-hidden mb-6 border border-nat-border flex items-end">
         <motion.div 
           className="w-16 h-16 bg-blue-500 rounded border-2 border-blue-700 flex items-center justify-center text-white font-bold mb-8 z-10"
@@ -102,7 +105,10 @@ function GravitationSimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <h3 className="text-xl font-bold font-serif italic mb-4">Universal Gravitation</h3>
+      <h3 className="text-xl font-bold font-serif italic mb-1">Universal Gravitation</h3>
+      <p className="text-sm text-nat-muted mb-4 max-w-2xl">
+        Explore Newton's Law of Universal Gravitation (F = G·m₁m₂/r²). Note how doubling the distance reduces the force to a quarter.
+      </p>
       <div className="bg-slate-900 h-48 rounded-xl relative overflow-hidden mb-6 flex items-center justify-center gap-4">
         <div 
           className="rounded-full bg-blue-400 opacity-80 transition-all flex items-center justify-center text-xs font-bold"
@@ -155,7 +161,10 @@ function WorkEnergySimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <h3 className="text-xl font-bold font-serif italic mb-4">Conservation of Energy</h3>
+      <h3 className="text-xl font-bold font-serif italic mb-1">Conservation of Energy</h3>
+      <p className="text-sm text-nat-muted mb-4 max-w-2xl">
+        See how gravitational potential energy (mgh) converts entirely into kinetic energy as the object falls, assuming zero air resistance.
+      </p>
       <div className="bg-sky-50 h-48 rounded-xl relative overflow-hidden mb-6 border border-nat-border">
         {/* Ground */}
         <div className="absolute bottom-0 left-0 w-full h-8 bg-green-200 border-t-2 border-green-300" />
@@ -206,7 +215,10 @@ function EyeSimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <h3 className="text-xl font-bold font-serif italic mb-4">Human Eye Defect Simulator</h3>
+      <h3 className="text-xl font-bold font-serif italic mb-1">Human Eye Defect Simulator</h3>
+      <p className="text-sm text-nat-muted mb-4 max-w-2xl">
+        Understand visual defects. Myopia focuses light in front of the retina (needs concave lens), while hypermetropia focuses behind it (needs convex lens).
+      </p>
       
       <div className="bg-rose-50 h-64 rounded-xl relative overflow-hidden mb-6 border border-nat-border flex items-center justify-center">
          <svg viewBox="0 0 400 200" className="w-full h-full max-w-lg">
@@ -284,7 +296,10 @@ function MagnetismSimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <h3 className="text-xl font-bold font-serif italic mb-4">Magnetic Effect of Current</h3>
+      <h3 className="text-xl font-bold font-serif italic mb-1">Magnetic Effect of Current</h3>
+      <p className="text-sm text-nat-muted mb-4 max-w-2xl">
+        Visualize Biot-Savart Law. A straight current-carrying wire generates concentric magnetic field lines whose strength weakens with distance.
+      </p>
       
       <div className="bg-gray-100 h-64 rounded-xl relative overflow-hidden mb-6 border border-gray-200 flex flex-col items-center justify-center p-8">
          <div className="w-1 h-full bg-orange-600 absolute left-1/2 -translate-x-1/2" />
@@ -428,12 +443,17 @@ function ElectrostaticsSimulation() {
 
   return (
     <div className="bg-white rounded-3xl border border-nat-border shadow-inner p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold font-serif italic mb-0">Vector Electrostatics</h3>
+      <div className="flex justify-between items-start mb-4 gap-4">
+        <div>
+          <h3 className="text-xl font-bold font-serif italic mb-1">Vector Electrostatics</h3>
+          <p className="text-sm text-nat-muted max-w-lg">
+            Understand principle of superposition. The net force on a charge is the vector sum of individual Coulomb forces from all other charges.
+          </p>
+        </div>
         <select 
           value={shape}
           onChange={(e) => setShape(e.target.value as any)}
-          className="bg-nat-light border border-nat-border rounded-xl px-3 py-1.5 font-bold text-sm"
+          className="bg-nat-light border border-nat-border rounded-xl px-3 py-1.5 font-bold text-sm shrink-0 mt-1"
         >
           <option value="line">Line (2 Charges)</option>
           <option value="triangle">Triangle (3 Charges)</option>

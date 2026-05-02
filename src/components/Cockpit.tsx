@@ -163,21 +163,35 @@ export function Cockpit() {
                     </div>
                   ) : (
                     <ul className="space-y-4">
-                      {attempts.map((attempt) => (
-                        <li key={attempt.id} className="flex items-center justify-between p-4 rounded-xl border border-nat-border hover:bg-nat-light transition-colors">
-                          <div>
-                            <div className="font-bold text-nat-dark text-sm mb-1">{attempt.topicId.replace('-', ' ')}</div>
-                            <div className="text-xs text-nat-muted">
-                              {attempt.date.toLocaleDateString()} at {attempt.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {attempts.map((attempt) => {
+                        const percentage = attempt.total > 0 ? (attempt.score / attempt.total) * 100 : 0;
+                        const bgColor = percentage > 80 ? 'bg-green-500' : percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+                        const textColor = percentage > 80 ? 'text-green-600' : percentage >= 50 ? 'text-yellow-600' : 'text-red-500';
+                        
+                        return (
+                          <li key={attempt.id} className="flex flex-col gap-3 p-4 rounded-xl border border-nat-border hover:bg-nat-light transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-bold text-nat-dark text-sm mb-1 capitalize">{attempt.topicId.replace(/-/g, ' ')}</div>
+                                <div className="text-xs text-nat-muted">
+                                  {attempt.date.toLocaleDateString()} at {attempt.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <span className={`text-sm font-mono font-bold ${textColor}`}>
+                                  {attempt.score}/{attempt.total} ({percentage.toFixed(0)}%)
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <span className={`text-lg font-mono font-bold ${attempt.score >= attempt.total * 0.8 ? 'text-green-600' : attempt.score >= attempt.total * 0.5 ? 'text-orange-500' : 'text-red-500'}`}>
-                              {attempt.score}/{attempt.total}
-                            </span>
-                          </div>
-                        </li>
-                      ))}
+                            <div className="w-full h-1.5 bg-nat-border/50 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${bgColor} transition-all duration-1000 ease-out`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

@@ -204,11 +204,10 @@ export default function App() {
 
         {/* Header content */}
       </div>
-
-      {/* Main Content */}
+        {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-nat-border flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 gap-4">
+        <header className="h-16 bg-white border-b border-nat-border flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-20 gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <button className="md:hidden text-nat-muted hover:text-nat-dark shrink-0 p-2 hover:bg-nat-panel rounded-lg" onClick={() => setSidebarOpen(true)}>
               <Menu className="h-6 w-6" />
@@ -265,38 +264,38 @@ export default function App() {
                 </button>
               </div>
             )}
-          </div>
+           </div>
         </header>
+
+        {activeTab !== 'cockpit' && (
+          <div className="w-full bg-white/80 backdrop-blur-md border-b border-nat-border z-10 flex justify-center px-4 shrink-0">
+            <div className="w-full max-w-[1024px] py-3 flex items-center gap-2 md:gap-6 overflow-x-auto no-scrollbar">
+              {[
+                { id: 'theory', icon: BookOpen, label: 'Theory' },
+                { id: 'lab', icon: FlaskConical, label: 'Lab', show: selectedTopic.hasSimulation },
+                { id: 'test', icon: CheckSquare, label: 'Practice' },
+                { id: 'ai', icon: HelpCircle, label: 'Ask Tutor' }
+              ].filter(t => t.show !== false).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as TabView)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold transition-all uppercase tracking-[0.2em] whitespace-nowrap",
+                    activeTab === tab.id 
+                      ? "bg-nat-dark text-white shadow-lg ring-1 ring-black/10 scale-[1.02]" 
+                      : "text-nat-muted hover:text-nat-dark hover:bg-nat-light"
+                  )}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Scrollable Content Area */}
         <main className="flex-1 overflow-y-auto flex flex-col items-center">
-          {activeTab !== 'cockpit' && (
-            <div className="w-full bg-white/80 backdrop-blur-md border-b border-nat-border sticky top-0 z-20 flex justify-center px-4">
-              <div className="w-full max-w-[1024px] py-3 flex items-center gap-2 md:gap-6 overflow-x-auto no-scrollbar">
-                {[
-                  { id: 'theory', icon: BookOpen, label: 'Theory' },
-                  { id: 'lab', icon: FlaskConical, label: 'Lab', show: selectedTopic.hasSimulation },
-                  { id: 'test', icon: CheckSquare, label: 'Practice' },
-                  { id: 'ai', icon: HelpCircle, label: 'Ask Tutor' }
-                ].filter(t => t.show !== false).map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as TabView)}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold transition-all uppercase tracking-[0.2em] whitespace-nowrap",
-                      activeTab === tab.id 
-                        ? "bg-nat-dark text-white shadow-lg ring-1 ring-black/10 scale-[1.02]" 
-                        : "text-nat-muted hover:text-nat-dark hover:bg-nat-light"
-                    )}
-                  >
-                    <tab.icon className="w-3.5 h-3.5" />
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="w-full max-w-[1024px] p-4 md:p-8 space-y-8 flex-1">
             
             {activeTab === 'theory' && (
